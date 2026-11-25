@@ -1,0 +1,14 @@
+# 统一换行符：仓库内新增文本一律 LF，避免 macOS / Windows 来回改行尾
+* text=auto eol=lf
+
+# 原始输入与样例数据保持原字节（CRLF 属于文件本身的特征，不做转换）
+需求输入/*.html -text
+*.csv -text
+
+# 二进制：不做换行转换、不在 diff 里展开
+*.jpg binary
+*.jpeg binary
+*.png binary
+*.gif binary
+*.zip binary
+*.pdf binary

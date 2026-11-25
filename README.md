@@ -20,6 +20,20 @@
 | `智能数据预测-本对话产出索引-v2-20261125.html` | 产出索引 v2，全站「层叠 2」卡片 |
 | `智能数据预测-文件模块优化方案-20261124.html` | 文件模块四方案对比（A/B/C/D） |
 
+## 多机协作
+
+```bash
+git clone https://github.com/Ellisonnnnnnn/file-not-lost-skill.git
+cd file-not-lost-skill
+git config core.quotepath false   # 中文路径按原样显示，不转义成 \346\231\...
+```
+
+- 拉取约 44 MB（含 37 份迭代快照），首次 clone 稍慢属正常。
+- 换机后先 `git pull --rebase` 再动手，提交前 `git status` 确认只含本次改动。
+- 归档用带注释标签：`git tag -a v2.1.0 -m "..." && git push --tags`，版本号延续现有序列。
+- 不随仓库同步：`.workbuddy/`（会话与记忆）、`*.zip`（打包产物）、`tools/shots/`（调试截图）。
+  跨机器要复用的结论请写进 README 或 `docs/`，别只留在本地记忆里。
+
 ## 版本记录
 
 | 版本 | 日期 | 内容 |
