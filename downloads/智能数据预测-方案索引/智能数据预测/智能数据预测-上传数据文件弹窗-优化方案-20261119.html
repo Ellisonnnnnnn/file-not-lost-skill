@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>上传数据文件 · 信息重排 4 方案</title>
+<style>
+:root{
+  --blue:#0081FF; --blue-weak:#E9F3FF; --blue-line:#B9D8FF;
+  --n8:#303133; --n7:#4E5969; --n6:#909399; --n5:#737985;
+  --line:#EBEEF5; --line2:#DCDFE6; --line3:#E3E8EF;
+  --green:#21A366; --text-blue:#5B8FF9; --danger:#E54545;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;}
+body{
+  background:#F4F6F9;color:var(--n8);
+  font:14px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+button{font-family:inherit;}
+.page{max-width:1120px;margin:0 auto;padding:40px 24px 80px;}
+
+/* ---------- 页头 ---------- */
+.hd h1{font-size:24px;font-weight:600;margin:0;letter-spacing:-.2px;}
+.hd p{font-size:13px;color:var(--n5);margin:8px 0 0;}
+
+/* ---------- 问题诊断 ---------- */
+.diag{background:#fff;border:1px solid var(--line);border-radius:10px;padding:20px 24px 18px;margin-top:20px;}
+.diag h2{font-size:14px;font-weight:600;margin:0;display:flex;align-items:center;gap:8px;}
+.diag h2::before{content:"";width:3px;height:14px;border-radius:2px;background:#FF9F1C;}
+.diag .lead{font-size:13px;color:var(--n5);margin:6px 0 14px;}
+.diag ol{margin:0;padding:0;list-style:none;counter-reset:d;display:grid;grid-template-columns:1fr 1fr;gap:10px 32px;}
+.diag li{position:relative;padding-left:24px;font-size:13px;line-height:1.7;color:var(--n7);counter-increment:d;}
+.diag li::before{
+  content:counter(d);position:absolute;left:0;top:2px;
+  width:16px;height:16px;border-radius:50%;background:#F0F2F5;color:var(--n6);
+  font-size:11px;line-height:16px;text-align:center;font-weight:600;
+}
+.diag li b{color:var(--n8);font-weight:600;}
+
+/* ---------- 方案切换 ---------- */
+.tabs{display:flex;gap:8px;margin:28px 0 0;flex-wrap:wrap;}
+.tab{
+  height:36px;padding:0 16px;border-radius:18px;border:1px solid var(--line2);
+  background:#fff;color:var(--n7);font-size:13px;cursor:pointer;transition:.15s;
+  display:inline-flex;align-items:center;gap:6px;
+}
+.tab:hover{border-color:var(--blue);color:var(--blue);}
+.tab.on{background:var(--blue);border-color:var(--blue);color:#fff;}
+.tab .dot{width:5px;height:5px;border-radius:50%;background:var(--blue);}
+.tab.on .dot{background:#fff;}
+
+/* ---------- 方案内容 ---------- */
+.pane{display:none;padding-top:26px;}
+.pane.on{display:block;animation:fade .22s ease;}
+@keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+
+.pane-title{font-size:17px;font-weight:600;display:flex;align-items:center;gap:10px;margin:0;}
+.badge{font-size:11px;font-weight:500;color:var(--blue);background:var(--blue-weak);border-radius:4px;padding:2px 7px;line-height:18px;}
+.badge--gray{color:var(--n5);background:#F0F2F5;}
+.pane-sub{font-size:13px;color:var(--n5);margin:7px 0 0;}
+
+.points{display:grid;grid-template-columns:1fr 1fr;gap:8px 32px;margin:16px 0 24px;padding:0;list-style:none;}
+.points li{font-size:13px;line-height:1.7;color:var(--n7);padding-left:16px;position:relative;}
+.points li::before{content:"";position:absolute;left:3px;top:9px;width:5px;height:5px;border-radius:50%;background:var(--blue);opacity:.45;}
+.points b{color:var(--n8);font-weight:600;}
+
+.frame{
+  background:#EDF0F5;border:1px solid var(--line3);border-radius:12px;
+  padding:32px;display:flex;justify-content:center;
+}
+
+/* ---------- 弹窗基础 ---------- */
+.modal{
+  width:840px;background:#fff;border-radius:8px;overflow:hidden;
+  box-shadow:0 14px 36px rgba(31,35,41,.10),0 2px 6px rgba(31,35,41,.04);
+  display:flex;flex-direction:column;position:relative;
+}
+.m-hd{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 24px;height:56px;border-bottom:1px solid var(--line);flex:none;}
+.m-hd h3{font-size:16px;font-weight:600;margin:0;}
+.m-x{width:28px;height:28px;border:0;background:transparent;color:var(--n6);cursor:pointer;border-radius:4px;display:grid;place-items:center;flex:none;}
+.m-x:hover{background:#F2F4F7;color:var(--n7);}
+.m-bd{padding:18px 24px 8px;flex:1;min-height:0;}
+.m-ft{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 24px;border-top:1px solid var(--line);flex:none;}
+.ft-note{font-size:12px;color:var(--n6);}
+.btn{height:32px;padding:0 18px;border-radius:4px;font-size:13px;cursor:pointer;border:1px solid var(--line2);background:#fff;color:var(--n7);transition:.15s;}
+.btn:hover{border-color:var(--blue);color:var(--blue);}
+.btn--pri{background:var(--blue);border-color:var(--blue);color:#fff;}
+.btn--pri:hover{background:#0070DE;border-color:#0070DE;color:#fff;}
+.btn--ghost{height:28px;padding:0 10px;border:0;background:transparent;color:var(--blue);font-size:13px;}
+.btn--ghost:hover{background:#F2F7FF;border-radius:4px;}
+
+/* ---------- 上传条 ---------- */
+.drop{
+  border:1px dashed #D8DEE8;border-radius:6px;background:#FCFDFF;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  cursor:pointer;transition:.15s;color:var(--n5);font-size:13px;
+}
+.drop:hover,.drop.is-drag{border-color:var(--blue);background:#F5FAFF;}
+.drop svg{color:var(--blue);flex:none;}
+.drop strong{color:var(--blue);font-weight:500;}
+.drop--slim{height:56px;}
+.drop--line{height:44px;border-radius:6px;font-size:12.5px;justify-content:flex-start;padding:0 14px;gap:6px;}
+.drop--line .hint{margin-left:6px;color:var(--n6);font-size:12px;}
+
+/* ---------- 约束行 ---------- */
+.drop-meta{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px;color:var(--n6);line-height:20px;}
+.drop-meta .grow{flex:1;}
+.mini-link{border:0;background:transparent;padding:0;color:var(--blue);font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:3px;}
+.mini-link:hover{text-decoration:underline;}
+.mini-link .car{transition:transform .18s;}
+.mini-link.open .car{transform:rotate(180deg);}
+
+/* ---------- 格式说明面板 ---------- */
+.fmt{
+  margin-top:10px;border:1px solid var(--line);border-radius:6px;background:#FAFBFC;
+  padding:14px 16px 12px;font-size:12px;line-height:1.85;color:var(--n7);
+}
+.fmt[hidden]{display:none;}
+.fmt .fmt-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.fmt .fmt-hd b{font-size:12.5px;font-weight:600;color:var(--n8);}
+.fmt ul{margin:0;padding:0;list-style:none;}
+.fmt li{position:relative;padding-left:14px;color:var(--n7);}
+.fmt li+li{margin-top:4px;}
+.fmt li::before{content:"";position:absolute;left:2px;top:9px;width:4px;height:4px;border-radius:50%;background:#C3C9D4;}
+.fmt li b{color:var(--n8);font-weight:600;}
+.fmt pre{
+  margin:8px 0 0;padding:8px 10px;background:#fff;border:1px solid var(--line);border-radius:4px;
+  font:12px/1.7 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--n7);overflow:auto;
+}
+.fmt .dl{display:flex;gap:14px;margin-top:6px;}
+
+/* ---------- 文件列表（A / B / C 共用原子） ---------- */
+.f-list{list-style:none;margin:2px 0 0;padding:0;}
+.frow{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--line);}
+.frow:last-child{border-bottom:0;}
+.fico{width:26px;height:32px;flex:none;position:relative;color:var(--green);}
+.fico svg{display:block;width:26px;height:32px;}
+.fico b{position:absolute;left:0;right:0;bottom:4px;text-align:center;font-size:11px;font-weight:600;color:#fff;letter-spacing:.4px;}
+.fico--t{color:var(--text-blue);}
+.fmain{flex:1;min-width:0;}
+.fname{font-size:14px;color:var(--n8);line-height:22px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.fmeta{font-size:12px;color:var(--n6);line-height:18px;margin-top:1px;}
+.fmeta .sep{margin:0 5px;color:#D5D9E0;}
+.fmeta .warn{color:#D98B1E;}
+
+/* 用途胶囊 */
+.purpose{position:relative;flex:none;}
+.purpose select{
+  appearance:none;-webkit-appearance:none;
+  height:28px;border:1px solid var(--line2);border-radius:14px;background:#fff;
+  color:var(--n7);font-size:12px;padding:0 26px 0 11px;cursor:pointer;outline:0;
+  transition:.15s;font-family:inherit;
+}
+.purpose select:hover{border-color:#AFB8C6;}
+.purpose select:focus{border-color:var(--blue);box-shadow:0 0 0 2px rgba(0,129,255,.12);}
+.purpose select.is-data{border-color:var(--blue-line);background:var(--blue-weak);color:#0066CC;font-weight:500;}
+.purpose .car{position:absolute;right:8px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--n6);}
+
+/* 更多菜单 */
+.more{position:relative;flex:none;}
+.more-btn{width:28px;height:28px;border:0;background:transparent;border-radius:4px;color:var(--n6);cursor:pointer;display:grid;place-items:center;}
+.more-btn:hover{background:#F2F4F7;color:var(--n7);}
+.menu{
+  position:absolute;right:0;top:32px;z-index:20;width:152px;background:#fff;
+  border:1px solid var(--line);border-radius:6px;box-shadow:0 8px 24px rgba(31,35,41,.13);padding:4px;
+}
+.menu[hidden]{display:none;}
+.menu button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:7px 10px;font-size:13px;color:var(--n7);border-radius:4px;cursor:pointer;line-height:20px;}
+.menu button:hover{background:#F5F7FA;}
+.menu button.danger{color:var(--danger);}
+.menu .sep{height:1px;background:var(--line);margin:4px 0;}
+
+/* 空态 */
+.empty{
+  padding:26px 0 22px;text-align:center;font-size:13px;color:var(--n6);
+  border-bottom:0;
+}
+.empty b{display:block;color:var(--n7);font-weight:500;font-size:13px;margin-bottom:2px;}
+
+/* ---------- 方案 B ---------- */
+.sec{display:flex;align-items:baseline;gap:8px;margin:4px 0 10px;}
+.sec h4{font-size:13px;font-weight:600;margin:0;color:var(--n8);}
+.sec em{font-style:normal;font-size:12px;color:var(--n6);}
+.sec .right{margin-left:auto;font-size:12px;}
+.dcard{border:1px solid var(--blue-line);background:#FBFDFF;border-radius:8px;padding:14px 16px;}
+.dcard .top{display:flex;align-items:center;gap:12px;}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;padding-left:38px;align-items:center;}
+.chips .lb{font-size:11px;color:var(--n6);margin-right:2px;}
+.chip{
+  font:11px/20px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  padding:0 8px;border-radius:4px;background:#F0F2F5;color:var(--n5);
+}
+.chip--date{background:#EEF6FF;color:#2A7FD9;}
+.chip--val{background:var(--blue);color:#fff;}
+.mini-row{
+  display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);
+  border-radius:6px;background:#FCFDFF;
+}
+.mini-row .fname{font-size:13px;}
+.mini-row .fmeta{font-size:12px;margin-top:0;}
+.mini-row .tail{margin-left:auto;display:flex;align-items:center;gap:4px;}
+.add-line{
+  margin-top:10px;height:40px;width:100%;border:1px dashed #D8DEE8;border-radius:6px;
+  background:#fff;color:var(--n5);font-size:12.5px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+}
+.add-line:hover{border-color:var(--blue);color:var(--blue);background:#F8FBFF;}
+.add-line svg{color:currentColor;}
+
+/* ---------- 方案 C ---------- */
+.c-list{list-style:none;margin:12px 0 0;padding:0;}
+.c-list li{
+  display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);
+  transition:opacity .18s;
+}
+.c-list li:last-child{border-bottom:0;}
+.c-list .fname{font-size:13.5px;}
+.c-set{
+  flex:none;border:0;background:transparent;color:var(--n6);font-size:12.5px;
+  height:26px;padding:0 8px;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;
+}
+.c-set:hover{background:#F2F7FF;color:var(--blue);}
+.rv-hint{display:none;margin-top:24px;padding:14px;border:1px dashed #E3E8EF;border-radius:6px;background:#FAFBFC;font-size:12px;color:var(--n6);text-align:center;}
+.modal.tall-slide .rv-hint{display:block;margin-right:330px;}
+.slide{
+  position:absolute;top:0;right:0;bottom:0;width:330px;background:#fff;
+  border-left:1px solid var(--line);box-shadow:-10px 0 28px rgba(31,35,41,.07);
+  transform:translateX(101%);transition:transform .24s cubic-bezier(.4,0,.2,1);
+  display:flex;flex-direction:column;z-index:10;
+}
+.slide.on{transform:translateX(0);}
+.modal.tall-slide{min-height:540px;transition:min-height .24s ease;}
+.slide-hd{display:flex;align-items:center;justify-content:space-between;padding:0 18px;height:52px;border-bottom:1px solid var(--line);flex:none;}
+.slide-hd b{font-size:14px;font-weight:600;}
+.slide-bd{padding:16px 18px;overflow:auto;flex:1;}
+.slide-ft{padding:12px 18px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;flex:none;}
+.field{margin-bottom:14px;}
+.field-row{display:flex;gap:10px;}
+.field-row .field{flex:1;min-width:0;}
+.field-row .field select{padding:0 6px;}
+.field>label{display:block;font-size:12px;color:var(--n6);margin-bottom:5px;}
+.field select,.field input{
+  width:100%;height:32px;border:1px solid var(--line2);border-radius:4px;background:#fff;
+  font-size:13px;color:var(--n8);padding:0 10px;outline:0;font-family:inherit;
+}
+.field select:focus,.field input:focus{border-color:var(--blue);box-shadow:0 0 0 2px rgba(0,129,255,.12);}
+.radio-grp{display:flex;flex-direction:column;gap:2px;}
+.radio-grp label{
+  display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-radius:6px;
+  font-size:13px;color:var(--n7);cursor:pointer;border:1px solid transparent;
+}
+.radio-grp label:hover{background:#F7F9FC;}
+.radio-grp label.on{border-color:var(--blue-line);background:var(--blue-weak);color:#0066CC;}
+.radio-grp input{accent-color:var(--blue);margin:3px 0 0;}
+.radio-grp small{display:block;font-size:11.5px;color:var(--n6);font-weight:400;line-height:1.6;}
+.sec-label{font-size:11.5px;color:var(--n6);letter-spacing:.3px;margin:0 0 8px;font-weight:500;}
+.dv{height:1px;background:var(--line);margin:14px 0;}
+.preview-mini{border:1px solid var(--line);border-radius:6px;overflow:hidden;font-size:11px;}
+.preview-mini table{width:100%;border-collapse:collapse;font-family:ui-monospace,Menlo,monospace;}
+.preview-mini th{background:#FAFBFC;color:var(--n6);font-weight:500;text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap;}
+.preview-mini td{padding:5px 8px;border-bottom:1px solid #F5F7FA;color:var(--n7);white-space:nowrap;}
+.preview-mini tr:last-child td{border-bottom:0;}
+
+/* ---------- 方案 D ---------- */
+table.flist{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px;}
+.flist thead th{
+  text-align:left;font-size:12px;font-weight:500;color:var(--n6);
+  padding:0 10px 9px;border-bottom:1px solid var(--line);white-space:nowrap;
+}
+.flist thead th:first-child{padding-left:0;}
+.flist thead th:last-child{padding-right:0;text-align:right;}
+.flist td{padding:13px 10px;border-bottom:1px solid var(--line);vertical-align:middle;}
+.flist td:first-child{padding-left:0;}
+.flist td:last-child{padding-right:0;text-align:right;}
+.flist tbody tr:last-child td{border-bottom:0;}
+.flist .cell-file{display:flex;align-items:center;gap:10px;min-width:0;}
+.flist .cell-file .fname{font-size:13.5px;max-width:250px;}
+.flist .cell-content{font-size:12.5px;color:var(--n5);white-space:nowrap;}
+.flist .ops{display:inline-flex;align-items:center;gap:6px;}
+.flist .ops .more{display:inline-flex;}
+.flist .ops .menu{top:30px;}
+
+/* ---------- 页脚说明 ---------- */
+.tail-note{
+  margin-top:18px;font-size:12.5px;color:var(--n5);line-height:1.8;
+  background:#fff;border:1px solid var(--line);border-radius:8px;padding:14px 18px;
+}
+.tail-note b{color:var(--n8);font-weight:600;}
+
+@media (max-width:1100px){
+  .frame{padding:20px;overflow:auto;}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="hd">
+    <h1>上传数据文件 · 信息重排 4 方案</h1>
+    <p>同一套功能，四种信息组织方式。点上方标签切换，方案里的下拉、折叠、菜单都能点。</p>
+  </header>
+
+  <section class="diag">
+    <h2>现在乱在哪</h2>
+    <p class="lead">按你这两张截图，问题主要不在视觉风格，而在「同一件事被说成三四遍」。</p>
+    <ol>
+      <li><b>四个控件说一件事</b>：「本轮引用」勾选 + 「作为分析数据」下拉 + 「引用到输入框」+「移除」挤在一行，分不清勾了和点了的区别。</li>
+      <li><b>上传区不让位</b>：144px 大框始终常驻，已有文件时仍占掉弹窗三分之一，真正的文件信息被挤到折线以下。</li>
+      <li><b>格式约束说了两遍</b>：上面一行「TXT/CSV · UTF-8 · 2MB」，下面又有「文件格式要求 / 首行字段名·至少日期列+数值列」；示例下载还混在约束行里像普通链接。</li>
+      <li><b>技术状态当主信息</b>：整条灰底提示 + 「本次会话可用」压过文件名，用户会以为这是功能而不是降级。</li>
+      <li><b>主次颠倒</b>：文件名 16px 加粗是全弹窗最重的字，但主角其实是「这份文件怎么进入本轮分析」。</li>
+      <li><b>「预览」飘在右边</b>：离文件名 600px，和引用 / 移除分裂成两个操作区。</li>
+    </ol>
+  </section>
+
+  <nav class="tabs">
+    <button class="tab on" data-t="A"><span class="dot"></span>方案 A · 单列收敛</button>
+    <button class="tab" data-t="B"><span class="dot"></span>方案 B · 双区分层</button>
+    <button class="tab" data-t="C"><span class="dot"></span>方案 C · 极简 + 二级</button>
+    <button class="tab" data-t="D"><span class="dot"></span>方案 D · 表格化</button>
+  </nav>
+
+  <!-- ============ 方案 A ============ -->
+  <section class="pane on" id="pane-A">
+    <h2 class="pane-title">方案 A · 单列收敛 <span class="badge">改动最小 · 推荐先试</span></h2>
+    <p class="pane-sub">保留现有单列结构，只把「四个控件说一件事」压成「一个用途胶囊 + 一个更多菜单」。</p>
+    <ul class="points">
+      <li><b>操作从 4 收到 2</b>：勾选 + 用途下拉 + 引用到输入框，合并成右侧一个用途胶囊（分析数据 / 背景说明 / 暂不引用）。</li>
+      <li><b>上传区让步</b>：144px 大框改成 56px 细条，已有文件时不再抢走三分之一视线。</li>
+      <li><b>格式只说一次</b>：约束行保留一行，细则按需展开，示例下载收进说明面板。</li>
+      <li><b>提示降噪</b>：「本次会话可用」这类技术状态移出主信息位，只在异常时出现。</li>
+    </ul>
+
+    <div class="frame">
+      <div class="modal" data-scheme="A">
+        <div class="m-hd">
+          <h3>上传数据文件</h3>
+          <button class="m-x" aria-label="关闭"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+        </div>
+        <div class="m-bd">
+          <div class="drop drop--slim">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 10.5V2.6M4.9 5.7 8 2.6l3.1 3.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.6 10.4v2.1c0 .5.4.9.9.9h9c.5 0 .9-.4.9-.9v-2.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <strong>点击上传</strong><span>或拖拽到此区域</span>
+          </div>
+          <div class="drop-meta">
+            <span>CSV / TXT · UTF-8 · 单文件 ≤ 2 MB · 每任务 ≤ 3 个</span>
+            <span class="grow"></span>
+            <button class="mini-link" data-fmt="A">格式说明
+              <svg class="car" width="10" height="10" viewBox="0 0 10 10"><path d="M2.2 3.9 5 6.7l2.8-2.8" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+          <div class="fmt" id="fmt-A" hidden>
+            <div class="fmt-hd"><b>文件格式要求</b><span style="color:#909399;font-size:11.5px">首行字段名 · 至少日期列 + 数值列</span></div>
+            <ul>
+              <li><b>数据表格 CSV / TXT</b>：逗号或制表符分列，至少含日期列（yyyy-MM-dd）和数值列，其余列作产品 / 维度。</li>
+              <li><b>纯文本 TXT</b>：写字段含义、业务口径或关注点，作为背景说明，不参与数值训练。</li>
+            </ul>
+            <pre>DATE,PRODUCT_ID,YIELD_RATE
+2026-11-10,B8A043W4V601,96.5</pre>
+            <div class="dl"><button class="mini-link">下载 CSV 示例</button><button class="mini-link">下载 TXT 示例</button></div>
+          </div>
+
+          <ul class="f-list" data-list="A">
+            <li class="frow">
+              <span class="fico"><svg viewBox="0 0 26 32" fill="none"><path d="M2 2.4A1.9 1.9 0 0 1 3.9.5h12.6L25 9.1v20.5a1.9 1.9 0 0 1-1.9 1.9H3.9A1.9 1.9 0 0 1 2 29.6V2.4Z" fill="currentColor"/><path d="M16.5.5 25 9.1h-6.7a1.8 1.8 0 0 1-1.8-1.8V.5Z" fill="#FFF" fill-opacity=".42"/></svg><b>C</b></span>
+              <div class="fmain">
+                <div class="fname" title="智能数据预测-上传测试数据-日度良率-20260701-20261110.csv">智能数据预测-上传测试数据-日度良率-20260701-20261110.csv</div>
+                <div class="fmeta">133 行 × 4 列<span class="sep">·</span>5 KB</div>
+              </div>
+              <span class="purpose">
+                <select data-purpose>
+                  <option value="data">本轮分析数据</option>
+                  <option value="context">背景说明</option>
+                  <option value="none">暂不引用</option>
+                </select>
+                <svg class="car" width="10" height="10" viewBox="0 0 10 10"><path d="M2.2 3.9 5 6.7l2.8-2.8" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              <span class="more">
+                <button class="more-btn" aria-label="更多操作"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="3.2" cy="8" r="1.3"/><circle cx="8" cy="8" r="1.3"/><circle cx="12.8" cy="8" r="1.3"/></svg></button>
+                <div class="menu" hidden>
+                  <button data-act="preview">预览内容</button>
+                  <button data-act="fill">填入输入框</button>
+                  <div class="sep"></div>
+                  <button class="danger" data-act="remove">移除文件</button>
+                </div>
+              </span>
+            </li>
+            <li class="frow">
+              <span class="fico fico--t"><svg viewBox="0 0 26 32" fill="none"><path d="M2 2.4A1.9 1.9 0 0 1 3.9.5h12.6L25 9.1v20.5a1.9 1.9 0 0 1-1.9 1.9H3.9A1.9 1.9 0 0 1 2 29.6V2.4Z" fill="currentColor"/><path d="M16.5.5 25 9.1h-6.7a1.8 1.8 0 0 1-1.8-1.8V.5Z" fill="#FFF" fill-opacity=".42"/></svg><b>T</b></span>
+              <div class="fmain">
+                <div class="fname" title="智能数据预测-上传测试数据-字段口径说明.txt">智能数据预测-上传测试数据-字段口径说明.txt</div>
+                <div class="fmeta">1.2 KB<span class="sep">·</span>文本说明</div>
+              </div>
+              <span class="purpose">
+                <select data-purpose>
+                  <option value="data">本轮分析数据</option>
+                  <option value="context" selected>背景说明</option>
+                  <option value="none">暂不引用</option>
+                </select>
+                <svg class="car" width="10" height="10" viewBox="0 0 10 10"><path d="M2.2 3.9 5 6.7l2.8-2.8" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              <span class="more">
+                <button class="more-btn" aria-label="更多操作"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="3.2" cy="8" r="1.3"/><circle cx="8" cy="8" r="1.3"/><circle cx="12.8" cy="8" r="1.3"/></svg></button>
+                <div class="menu" hidden>
+                  <button data-act="preview">预览内容</button>
+                  <button data-act="fill">填入输入框</button>
+                  <div class="sep"></div>
+                  <button class="danger" data-act="remove">移除文件</button>
+                </div>
+              </span>
+            </li>
+          </ul>
+        </div>
+        <div class="m-ft">
+          <span class="ft-note" data-note>A：本轮使用 1 份分析数据 · 1 份背景说明</span>
+          <button class="btn">完成</button>
+        </div>
+      </div>
+    </div>
+    <div class="tail-note">改动集中在 <b>showFileManager()</b> 与 <b>fileManagerList()</b>：删掉「本轮引用」复选框和「引用到输入框」链接，改成用途下拉；上传区高度 144 → 56；格式说明从常驻折叠条改成按需展开。</div>
+  </section>
+
+  <!-- ============ 方案 B ============ -->
+  <section class="pane" id="pane-B">
+    <h2 class="pane-title">方案 B · 双区分层 <span class="badge">信息最清楚 · 视觉最专业</span></h2>
+    <p class="pane-sub">按「谁在训练、谁只是背景」分区，用字段 chips 提前暴露这份文件能预测什么。</p>
+    <ul class="points">
+      <li><b>分区代替平铺</b>：「本轮分析数据」与「背景资料」两区分离，一眼看出主次关系。</li>
+      <li><b>字段 chips</b>：直接列出 DATE / PRODUCT_ID / YIELD_RATE，数值列主蓝高亮，不用点预览就知道能不能用。</li>
+      <li><b>撤掉大上传框</b>：入口变成右上「+ 添加文件」，空间全部留给文件本身。</li>
+      <li><b>背景资料收敛成小行</b>：文字说明类不占卡片高度，只留一行 + 移除。</li>
+    </ul>
+
+    <div class="frame">
+      <div class="modal" data-scheme="B">
+        <div class="m-hd">
+          <h3>上传数据文件</h3>
+          <div style="display:flex;align-items:center;gap:6px">
+            <button class="btn--ghost" style="display:inline-flex;align-items:center;gap:4px;font-size:13px">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3.2v9.6M3.2 8h9.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              添加文件
+            </button>
+            <button class="m-x" aria-label="关闭"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+          </div>
+        </div>
+        <div class="m-bd" style="padding-bottom:18px">
+          <div class="sec"><h4>本轮分析数据</h4><em>只能一份，用于训练与预测</em></div>
+          <div class="dcard">
+            <div class="top">
+              <span class="fico"><svg viewBox="0 0 26 32" fill="none"><path d="M2 2.4A1.9 1.9 0 0 1 3.9.5h12.6L25 9.1v20.5a1.9 1.9 0 0 1-1.9 1.9H3.9A1.9 1.9 0 0 1 2 29.6V2.4Z" fill="currentColor"/><path d="M16.5.5 25 9.1h-6.7a1.8 1.8 0 0 1-1.8-1.8V.5Z" fill="#FFF" fill-opacity=".42"/></svg><b>C</b></span>
+              <div class="fmain">
+                <div class="fname" title="智能数据预测-上传测试数据-日度良率-20260701-20261110.csv">智能数据预测-上传测试数据-日度良率-20260701-20261110.csv</div>
+                <div class="fmeta">133 行 × 4 列<span class="sep">·</span>5 KB<span class="sep">·</span>2026-07-01 ~ 2026-11-10</div>
+              </div>
+              <button class="btn--ghost" style="flex:none">预览</button>
+              <button class="btn" style="height:28px;padding:0 12px;font-size:12.5px;flex:none">换一份</button>
+            </div>
+            <div class="chips">
+              <span class="lb">识别到字段</span>
+              <span class="chip chip--date">DATE</span>
+              <span class="chip chip--val">YIELD_RATE</span>
+              <span class="chip">PRODUCT_ID</span>
+              <span class="chip">OUTPUT_QTY</span>
+            </div>
+          </div>
+
+          <div class="sec" style="margin-top:20px"><h4>背景资料</h4><em>可选，最多 2 份，只做解释不进模型</em></div>
+          <div class="mini-row">
+            <span class="fico fico--t"><svg viewBox="0 0 26 32" fill="none"><path d="M2 2.4A1.9 1.9 0 0 1 3.9.5h12.6L25 9.1v20.5a1.9 1.9 0 0 1-1.9 1.9H3.9A1.9 1.9 0 0 1 2 29.6V2.4Z" fill="currentColor"/><path d="M16.5.5 25 9.1h-6.7a1.8 1.8 0 0 1-1.8-1.8V.5Z" fill="#FFF" fill-opacity=".42"/></svg><b>T</b></span>
+            <div class="fmain">
+              <div class="fname" title="智能数据预测-上传测试数据-字段口径说明.txt">智能数据预测-上传测试数据-字段口径说明.txt</div>
+              <div class="fmeta">1.2 KB · 文本说明</div>
+            </div>
+            <div class="tail">
+              <button class="btn--ghost" style="font-size:12.5px">预览</button>
+              <button class="more-btn" aria-label="更多操作"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="3.2" cy="8" r="1.3"/><circle cx="8" cy="8" r="1.3"/><circle cx="12.8" cy="8" r="1.3"/></svg></button>
+            </div>
+          </div>
+          <button class="add-line">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3.2v9.6M3.2 8h9.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+            再加一份背景资料（CSV / TXT）
+          </button>
+
+          <div class="drop-meta" style="margin-top:14px">
+            <span>支持 CSV / TXT · UTF-8 · 单文件 ≤ 2 MB</span>
+            <span class="grow"></span>
+            <button class="mini-link" data-fmt="B">格式要求与示例
+              <svg class="car" width="10" height="10" viewBox="0 0 10 10"><path d="M2.2 3.9 5 6.7l2.8-2.8" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+          <div class="fmt" id="fmt-B" hidden>
+            <ul>
+              <li><b>数据表格 CSV / TXT</b>：首行唯一字段名，逗号或制表符分列；至少含日期列（yyyy-MM-dd）和数值列。</li>
+              <li><b>纯文本 TXT</b>：无固定格式，用来写字段含义、业务口径或关注点。</li>
+            </ul>
+            <pre>DATE,PRODUCT_ID,YIELD_RATE
+2026-11-10,B8A043W4V601,96.5</pre>
+            <div class="dl"><button class="mini-link">下载 CSV 示例</button><button class="mini-link">下载 TXT 示例</button></div>
+          </div>
+        </div>
+        <div class="m-ft">
+          <span class="ft-note">B：1 份分析数据已就绪，可直接预测未来 7 天</span>
+          <button class="btn">完成</button>
+        </div>
+      </div>
+    </div>
+    <div class="tail-note">代价：需要一个「唯一分析数据」的容器逻辑（选第二份 CSV 时提示替换），字段 chips 要先解析表头。收益是用户不点预览也能判断文件能不能用。</div>
+  </section>
+
+  <!-- ============ 方案 C ============ -->
+  <section class="pane" id="pane-C">
+    <h2 class="pane-title">方案 C · 极简 + 二级 <span class="badge badge--gray">最干净 · 适合熟手</span></h2>
+    <p class="pane-sub">主视图只留文件名和用途两件事，其余全部下放到右侧「设置」面板。</p>
+    <ul class="points">
+      <li><b>列表只读两件事</b>：文件名 + 用途，一行扫完，不需要横向找按钮。</li>
+      <li><b>设置面板承载细节</b>：用途单选、日期列 / 数值列映射、内容预览、移除，都在二级。</li>
+      <li><b>上传条压成单行</b>：44px，右侧直接标出约束，不再有整片虚线大框。</li>
+      <li><b>默认视图最静</b>：首次配置完不再打扰，适合已经知道文件该怎么给的常用用户。</li>
+    </ul>
+
+    <div class="frame">
+      <div class="modal" data-scheme="C">
+        <div class="m-hd">
+          <h3>上传数据文件</h3>
+          <button class="m-x" aria-label="关闭"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+        </div>
+        <div class="m-bd" style="padding-bottom:18px">
+          <div class="drop drop--line">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 10.5V2.6M4.9 5.7 8 2.6l3.1 3.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.6 10.4v2.1c0 .5.4.9.9.9h9c.5 0 .9-.4.9-.9v-2.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <strong>点击或拖拽上传</strong>
+            <span class="hint">CSV / TXT · UTF-8 · ≤ 2 MB</span>
+          </div>
+
+          <ul class="c-list">
+            <li>
+              <span class="fico"><svg viewBox="0 0 26 32" fill="none"><path d="M2 2.4A1.9 1.9 0 0 1 3.9.5h12.6L25 9.1v20.5a1.9 1.9 0 0 1-1.9 1.9H3.9A1.9 1.9 0 0 1 2 29.6V2.4Z" fill="currentColor"/><path d="M16.5.5 25 9.1h-6.7a1.8 1.8 0 0 1-1.8-1.8V.5Z" fill="#FFF" fill-opacity=".42"/></svg><b>C</b></span>
+              <div class="fmain">
+                <div class="fname" title="智能数据预测-上传测试数据-日度良率-20260701-20261110.csv">智能数据预测-上传测试数据-日度良率-20260701-20261110.csv</div>
+                <div class="fmeta">133 行 × 4 列 · 5 KB · <span style="color:#0066CC">本轮分析数据</span></div>
+              </div>
+              <button class="c-set" data-open-slide>设置
+                <svg width="10" height="10" viewBox="0 0 10 10"><path d="M3.6 1.8 6.8 5l-3.2 3.2" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </li>
+            <li>
+              <span class="fico fico--t"><svg viewBox="0 0 26 32" fill="none"><path d="M2 2.4A1.9 1.9 0 0 1 3.9.5h12.6L25 9.1v20.5a1.9 1.9 0 0 1-1.9 1.9H3.9A1.9 1.9 0 0 1 2 29.6V2.4Z" fill="currentColor"/><path d="M16.5.5 25 9.1h-6.7a1.8 1.8 0 0 1-1.8-1.8V.5Z" fill="#FFF" fill-opacity=".42"/></svg><b>T</b></span>
+              <div class="fmain">
+                <div class="fname" title="智能数据预测-上传测试数据-字段口径说明.txt">智能数据预测-上传测试数据-字段口径说明.txt</div>
+                <div class="fmeta">1.2 KB · 文本说明 · 背景说明</div>
+              </div>
+              <button class="c-set" data-open-slide>设置
+                <svg width="10" height="10" viewBox="0 0 10 10"><path d="M3.6 1.8 6.8 5l-3.2 3.2" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </li>
+          </ul>
+          <div class="drop-meta" style="margin-top:10px"><span>每任务最多 3 个文件；表格作分析数据，文本作背景说明。</span></div>
+          <div class="rv-hint">用途、字段映射在右侧面板里改 →</div>
+        </div>
+        <div class="m-ft">
+          <span class="ft-note">C：2 个文件，1 个用于本轮分析</span>
+          <button class="btn">完成</button>
+        </div>
+
+        <!-- 二级设置面板 -->
+        <aside class="slide" id="slide-C">
+          <div class="slide-hd">
+            <b>文件设置</b>
+            <button class="m-x" data-close-slide aria-label="关闭设置"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+          </div>
+          <div class="slide-bd">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+              <span class="fico"><svg viewBox="0 0 26 32" fill="none"><path d="M2 2.4A1.9 1.9 0 0 1 3.9.5h12.6L25 9.1v20.5a1.9 1.9 0 0 1-1.9 1.9H3.9A1.9 1.9 0 0 1 2 29.6V2.4Z" fill="currentColor"/><path d="M16.5.5 25 9.1h-6.7a1.8 1.8 0 0 1-1.8-1.8V.5Z" fill="#FFF" fill-opacity=".42"/></svg><b>C</b></span>
+              <div class="fmain">
+                <div class="fname" style="font-size:13px;white-space:normal">日度良率-20260701-20261110.csv</div>
+                <div class="fmeta">133 行 × 4 列 · 5 KB</div>
+              </div>
+              <button class="mini-link" style="font-size:12px;flex:none">预览</button>
+            </div>
+
+            <p class="sec-label">这份文件怎么用</p>
+            <div class="radio-grp">
+              <label class="on"><input type="radio" name="purposeC" checked><span>本轮分析数据<small>用于训练与预测，只能有一份</small></span></label>
+              <label><input type="radio" name="purposeC"><span>仅作背景说明<small>辅助解释结果，不进入数值训练</small></span></label>
+              <label><input type="radio" name="purposeC"><span>暂不引用<small>保留在会话里，本轮不用</small></span></label>
+            </div>
+
+            <div class="dv"></div>
+            <p class="sec-label">字段映射</p>
+            <div class="field-row">
+              <div class="field"><label>日期列</label><select><option>DATE</option><option>PRODUCT_ID</option><option>YIELD_RATE</option></select></div>
+              <div class="field"><label>数值列</label><select><option>YIELD_RATE</option><option>OUTPUT_QTY</option></select></div>
+            </div>
+          </div>
+          <div class="slide-ft">
+            <button class="btn" style="color:#E54545;border-color:#F5C6C6">移除文件</button>
+            <button class="btn btn--pri" data-close-slide>保存设置</button>
+          </div>
+        </aside>
+      </div>
+    </div>
+    <div class="tail-note">代价：字段映射从「确认页」前移到上传弹窗，和现有 <b>fileMappingForm()</b> 有重复，需要决定是搬过来还是保持两处。适合文件格式稳定的内部用户。</div>
+  </section>
+
+  <!-- ============ 方案 D ============ -->
+  <section class="pane" id="pane-D">
+    <h2 class="pane-title">方案 D · 表格化 <span class="badge badge--gray">多文件最整齐</span></h2>
+    <p class="pane-sub">把文件当数据行来排：文件名 / 内容 / 用途 / 操作四列，表头承担解释，省掉重复文案。</p>
+    <ul class="points">
+      <li><b>四列对齐</b>：文件、内容、用途、操作列列对齐，三份文件时依然整齐不跳。</li>
+      <li><b>用途列内联下拉</b>：直接改，不再有勾选框和用途下拉的语义打架。</li>
+      <li><b>操作只留低频项</b>：预览、移除常驻，填入输入框收进行尾「⋯」。</li>
+      <li><b>表头即说明</b>：12px 灰表头解释每列是什么，正文不用再写「本轮引用」这类标签。</li>
+    </ul>
+
+    <div class="frame">
+      <div class="modal" data-scheme="D">
+        <div class="m-hd">
+          <h3>上传数据文件</h3>
+          <button class="m-x" aria-label="关闭"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+        </div>
+        <div class="m-bd" style="padding-bottom:14px">
+          <div class="drop drop--line">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 10.5V2.6M4.9 5.7 8 2.6l3.1 3.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.6 10.4v2.1c0 .5.4.9.9.9h9c.5 0 .9-.4.9-.9v-2.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <strong>点击或拖拽上传</strong>
+            <span class="hint">CSV / TXT · ≤ 2 MB · 最多 3 个</span>
+          </div>
+
+          <table class="flist" data-table="D">
+            <thead>
+              <tr><th style="width:44%">文件</th><th style="width:26%">内容</th><th style="width:18%">用途</th><th>操作</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <div class="cell-file">
+                    <span class="fico"><svg viewBox="0 0 26 32" fill="none"><path d="M2 2.4A1.9 1.9 0 0 1 3.9.5h12.6L25 9.1v20.5a1.9 1.9 0 0 1-1.9 1.9H3.9A1.9 1.9 0 0 1 2 29.6V2.4Z" fill="currentColor"/><path d="M16.5.5 25 9.1h-6.7a1.8 1.8 0 0 1-1.8-1.8V.5Z" fill="#FFF" fill-opacity=".42"/></svg><b>C</b></span>
+                    <span class="fname" title="智能数据预测-上传测试数据-日度良率-20260701-20261110.csv">日度良率-20260701-20261110.csv</span>
+                  </div>
+                </td>
+                <td class="cell-content">133 行 × 4 列 · 5 KB</td>
+                <td>
+                  <span class="purpose">
+                    <select data-purpose>
+                      <option value="data">分析数据</option>
+                      <option value="context">背景说明</option>
+                      <option value="none">不引用</option>
+                    </select>
+                    <svg class="car" width="10" height="10" viewBox="0 0 10 10"><path d="M2.2 3.9 5 6.7l2.8-2.8" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </span>
+                </td>
+                <td>
+                  <div class="ops">
+                    <button class="btn--ghost" style="font-size:12.5px">预览</button>
+                    <span class="more">
+                      <button class="more-btn" aria-label="更多操作"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="3.2" cy="8" r="1.3"/><circle cx="8" cy="8" r="1.3"/><circle cx="12.8" cy="8" r="1.3"/></svg></button>
+                      <div class="menu" hidden>
+                        <button data-act="fill">填入输入框</button>
+                        <div class="sep"></div>
+                        <button class="danger" data-act="remove">移除文件</button>
+                      </div>
+                    </span>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="cell-file">
+                    <span class="fico fico--t"><svg viewBox="0 0 26 32" fill="none"><path d="M2 2.4A1.9 1.9 0 0 1 3.9.5h12.6L25 9.1v20.5a1.9 1.9 0 0 1-1.9 1.9H3.9A1.9 1.9 0 0 1 2 29.6V2.4Z" fill="currentColor"/><path d="M16.5.5 25 9.1h-6.7a1.8 1.8 0 0 1-1.8-1.8V.5Z" fill="#FFF" fill-opacity=".42"/></svg><b>T</b></span>
+                    <span class="fname" title="字段口径说明.txt">字段口径说明.txt</span>
+                  </div>
+                </td>
+                <td class="cell-content">1.2 KB · 文本</td>
+                <td>
+                  <span class="purpose">
+                    <select data-purpose>
+                      <option value="data">分析数据</option>
+                      <option value="context" selected>背景说明</option>
+                      <option value="none">不引用</option>
+                    </select>
+                    <svg class="car" width="10" height="10" viewBox="0 0 10 10"><path d="M2.2 3.9 5 6.7l2.8-2.8" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </span>
+                </td>
+                <td>
+                  <div class="ops">
+                    <button class="btn--ghost" style="font-size:12.5px">预览</button>
+                    <span class="more">
+                      <button class="more-btn" aria-label="更多操作"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="3.2" cy="8" r="1.3"/><circle cx="8" cy="8" r="1.3"/><circle cx="12.8" cy="8" r="1.3"/></svg></button>
+                      <div class="menu" hidden>
+                        <button data-act="fill">填入输入框</button>
+                        <div class="sep"></div>
+                        <button class="danger" data-act="remove">移除文件</button>
+                      </div>
+                    </span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="drop-meta" style="margin-top:14px">
+            <span>首行字段名 · 至少日期列 + 数值列</span>
+            <span class="grow"></span>
+            <button class="mini-link" data-fmt="D">格式说明与示例
+              <svg class="car" width="10" height="10" viewBox="0 0 10 10"><path d="M2.2 3.9 5 6.7l2.8-2.8" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+          <div class="fmt" id="fmt-D" hidden>
+            <pre>DATE,PRODUCT_ID,YIELD_RATE
+2026-11-10,B8A043W4V601,96.5</pre>
+            <div class="dl"><button class="mini-link">下载 CSV 示例</button><button class="mini-link">下载 TXT 示例</button></div>
+          </div>
+        </div>
+        <div class="m-ft">
+          <span class="ft-note" data-note>D：1 份分析数据 · 1 份背景说明</span>
+          <button class="btn">完成</button>
+        </div>
+      </div>
+    </div>
+    <div class="tail-note">代价：表格在 840px 弹窗里列宽偏窄，长文件名必须截断；少于 2 个文件时表格的「整齐」优势看不出来，反而比列表更重。</div>
+  </section>
+  <div class="tail-note" style="margin-top:30px">
+    <b>怎么选</b><br>
+    只想小改、风险最低 → <b>A</b>（结构不动，只收敛控件）。<br>
+    想让评审一眼看懂「哪份在训练」→ <b>B</b>（分区 + 字段 chips）。<br>
+    文件格式固定的内部高频用户 → <b>C</b>（默认最静，细节下沉）。<br>
+    一次要传 2–3 份、要求列表整齐 → <b>D</b>（表格化）。<br>
+    <span style="color:#0081FF">我的建议：取 A 的控件收敛 + B 的「分析数据置顶 + 字段 chips」，其余保持单列——单文件是主场景，双区在只有一份时会多出空段落。</span>
+  </div>
+
+</div>
+
+<script>
+/* ---------- 方案切换 ---------- */
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t === tab));
+    document.querySelectorAll('.pane').forEach(p => p.classList.toggle('on', p.id === 'pane-' + tab.dataset.t));
+  });
+});
+
+/* ---------- 格式说明折叠 ---------- */
+document.querySelectorAll('[data-fmt]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const panel = document.getElementById('fmt-' + btn.dataset.fmt);
+    if (!panel) return;
+    panel.hidden = !panel.hidden;
+    btn.classList.toggle('open', !panel.hidden);
+  });
+});
+
+/* ---------- 用途互斥：分析数据只能一份 ---------- */
+function refreshPurpose(root) {
+  const sels = Array.from(root.querySelectorAll('select[data-purpose]'));
+  let taken = false;
+  sels.forEach(s => {
+    if (s.value === 'data') {
+      if (taken) s.value = 'context';
+      else taken = true;
+    }
+  });
+  sels.forEach(s => s.classList.toggle('is-data', s.value === 'data'));
+  const note = root.querySelector('[data-note]');
+  if (note) {
+    const data = sels.filter(s => s.value === 'data').length;
+    const ctx = sels.filter(s => s.value === 'context').length;
+    const prefix = note.textContent.split('：')[0];
+    note.textContent = prefix + '：本轮使用 ' + data + ' 份分析数据' + (ctx ? ' · ' + ctx + ' 份背景说明' : '');
+  }
+}
+document.querySelectorAll('.modal').forEach(root => {
+  const sels = root.querySelectorAll('select[data-purpose]');
+  if (!sels.length) return;
+  refreshPurpose(root);
+  sels.forEach(s => s.addEventListener('change', () => refreshPurpose(root)));
+});
+
+/* ---------- 更多菜单 ---------- */
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.more-btn');
+  if (btn) {
+    const menu = btn.parentElement.querySelector('.menu');
+    const wasOpen = menu && !menu.hidden;
+    document.querySelectorAll('.menu').forEach(m => { m.hidden = true; });
+    if (menu) menu.hidden = wasOpen;
+    e.stopPropagation();
+    return;
+  }
+  if (!e.target.closest('.menu')) {
+    document.querySelectorAll('.menu').forEach(m => { m.hidden = true; });
+  }
+});
+
+/* 移除文件（演示） */
+document.addEventListener('click', e => {
+  const rm = e.target.closest('[data-act="remove"]');
+  if (!rm) return;
+  const row = rm.closest('.frow') || rm.closest('tr');
+  if (!row) return;
+  const root = row.closest('.modal');
+  row.style.transition = 'opacity .18s';
+  row.style.opacity = '0';
+  setTimeout(() => {
+    row.remove();
+    const list = root.querySelector('[data-list]') || root.querySelector('tbody');
+    if (list && !list.children.length) {
+      if (list.tagName === 'TBODY') {
+        list.innerHTML = '<tr><td colspan="4" style="padding:30px 0;text-align:center;color:#909399;font-size:13px">还没有文件，点上方区域上传</td></tr>';
+      } else {
+        list.innerHTML = '<li class="empty"><b>还没有文件</b>点上方区域上传 CSV 或 TXT</li>';
+      }
+    }
+    refreshPurpose(root);
+  }, 180);
+});
+
+/* ---------- 方案 C 设置面板 ---------- */
+document.querySelectorAll('[data-open-slide]').forEach(b => {
+  b.addEventListener('click', () => {
+    const modal = b.closest('.modal');
+    modal.classList.add('tall-slide');
+    modal.querySelector('.slide').classList.add('on');
+  });
+});
+document.querySelectorAll('[data-close-slide]').forEach(b => {
+  b.addEventListener('click', () => {
+    const modal = b.closest('.modal');
+    modal.classList.remove('tall-slide');
+    modal.querySelector('.slide').classList.remove('on');
+  });
+});
+document.querySelectorAll('.radio-grp').forEach(grp => {
+  grp.querySelectorAll('label').forEach(lb => {
+    lb.addEventListener('click', () => {
+      grp.querySelectorAll('label').forEach(x => x.classList.toggle('on', x === lb));
+    });
+  });
+});
+</script>
+</body>
+</html>

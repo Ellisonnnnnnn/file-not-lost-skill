@@ -1,0 +1,90 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>智能数据预测 v12 · 交互说明</title><style>*{box-sizing:border-box}body{margin:0;background:#f5f7fa;color:#303133;font:14px/1.85 "Microsoft YaHei",sans-serif}header{background:#0067cc;color:white;padding:28px 40px}header h1{font-size:24px;margin:0 0 8px}header p{margin:0;opacity:.85}main{max-width:1140px;margin:24px auto;background:white;padding:32px 40px;border-radius:8px}h2{font-size:19px;border-bottom:1px solid #ebeef5;padding-bottom:10px;margin-top:32px}h3{font-size:15px}table{border-collapse:collapse;width:100%;margin:14px 0}th,td{border:1px solid #e4e7ed;padding:10px 12px;text-align:left;vertical-align:top}th{background:#f5f7fa;color:#606266}code{font:12px/1.7 Consolas,monospace;background:#f5f7fa;overflow-wrap:anywhere}a{color:#0081ff;text-decoration:none}.note{padding:12px 16px;background:#ecf5ff;border-left:3px solid #0081ff;margin:16px 0}.warn{background:#fff8eb;border-color:#d1a145}.flow{display:flex;align-items:center;gap:12px;margin:18px 0}.flow span{padding:10px 14px;background:#f0f7ff;border:1px solid #cce6ff;border-radius:4px}small{color:#737985}li{margin:7px 0}pre{white-space:pre-wrap;word-break:break-word;background:#f5f7fa;padding:16px;font:12px/1.7 Consolas,monospace}.pass{color:#21845c}nav{display:flex;gap:16px;flex-wrap:wrap}footer{margin-top:28px;border-top:1px solid #ebeef5;padding-top:12px;color:#737985;font-size:12px}@media print{body{background:white}header{background:white;color:#303133;padding:0}main{padding:0;margin:0}h2{break-after:avoid}tr{break-inside:avoid}}</style></head><body><header><h1>智能数据预测 · 交互说明</h1><p>工业AI平台 · 2026-11-12 / v12</p></header><main><nav><a href="#changes">本次调整</a><a href="#entry">直接进入</a><a href="#preview">数据核对</a><a href="#partition">数据集划分与验证</a><a href="#revise">按要求重新生成</a><a href="#result">结果与版本</a><a href="#files">文件引用</a><a href="#sources">数据源维护</a><a href="#boundary">实现边界</a><a href="#contract">开发对接</a><a href="#style">样式来源</a></nav>
+<div class="note">基于已交付的 <b>智能数据预测-20261112-v11.html</b> 迭代。继续采用用户确认的开发包 AR / BR 对话预测主线、任务列表和独立数据源维护，保留 iai-web 白色内容区、蓝色导航及 BOE 组件样式。原 v11 与生产仓库未覆盖。</div>
+<h2 id="changes">v12 本次调整</h2><ol><li>在数据核对页的特征选择下方增加“数据集划分与验证”，支持按时间比例和指定日期范围。</li><li>增加可选的时间序列交叉验证，配置折数、验证窗口和训练与验证间隔，预览每一折的日期与样本数。</li><li>划分采用全量有效日样本，不以预览表的 50 条记录为总量；开始预测时冻结配置，旧结果不随草稿变化。</li><li>结果页同步展示三段数据范围、独立验证与测试误差、交叉验证逐折结果及均值 / 标准差。JSON 保存完整快照，CSV 附带范围和验证方式。</li><li>保留左右对话、固定底部输入及现有任务流程，不增加确认勾选。</li></ol>
+<div class="flow"><span>任务列表</span>→<span>直接进入任务</span>→<span>确认 / 修改条件</span>→<span>核对数据与字段</span>→<span>预测与验证</span></div>
+<h2 id="entry">1. 新建任务直接进入</h2><table><tr><th>位置</th><th>交互与规则</th></tr><tr><td>任务列表 · 新建预测任务</td><td>立即创建草稿并进入任务页，默认名称“未命名预测任务”；不要求先选指标，无创建弹窗。</td></tr><tr><td>页内任务名称</td><td>顶部直接编辑，最多 60 字；输入保存到当前任务。名称为空时不能进入数据预览；运行中禁用修改。</td></tr><tr><td>场景 / 上传入口</td><td>保留三个业务场景和 TXT / CSV 上传。场景、引用及快捷建议先填入真实输入框，用户可以编辑或清空，再显式发送。</td></tr><tr><td>返回任务列表</td><td>已编辑的名称、草稿、对话与附件保留。继续已有草稿不另建任务。正在核对数据的任务从列表重新打开时直接进入核对页。</td></tr></table>
+<h2 id="preview">2. 确认条件后先核对数据</h2><h3>进入与数据范围</h3><p>原“确认并开始预测”改为“确认并预览数据”。先校验日期、跨度、产品、数据源或文件映射，显示读取状态，然后进入数据核对页。此时状态为“待核对数据”，不会生成预测结果。</p>
+<p>页内展示来源、历史时间、产品、匹配记录数与部分样本；预览最多前 50 条，支持每页 10 / 20 / 50 条及翻页。部分样本不代表全量数据质量。空数据时说明可调整时间、产品或日样本阈值，禁用预测，保留返回修改入口。</p>
+<h3>表头选择与可视反馈</h3><table><tr><th>操作</th><th>反馈</th><th>规则</th></tr>
+<tr><td>按住表头横向拖动</td><td>批量选中连续特征列；若从已选列起拖则批量取消范围内特征</td><td>不重建页面，实时着色和更新已选数量。接近表格左右边缘时横向滚动；松开、取消手势、窗口失焦或离页即停止。</td></tr>
+<tr><td>单击表头</td><td>切换该列是否为特征</td><td>支持 Enter / Space 键同等操作。日期、记录标识、当前目标以及平台同日结果列不可用作特征。</td></tr>
+<tr><td>“切换目标列”模式 / 表头“设为目标” / 目标下拉框</td><td>切换唯一目标列，用金黄色标识；蓝色为特征，灰色为未使用</td><td>目标必须为原始数值字段，不能选择日期、标识或衍生滞后列。切换后自动从特征中移除目标，清除原关注线并要求重新核对。</td></tr>
+<tr><td>已选特征标签</td><td>显示当前全部特征，即使相应列在横向滚动范围外仍可查看；点击 × 移除</td><td>提供清空和恢复推荐。至少保留一个特征才能开始。</td></tr>
+<tr><td>保存选择</td><td>保存字段选择和预览页码，不开始预测</td><td>存储可用时刷新后可恢复；返回条件并变更数据范围后重新预览。</td></tr></table>
+<p>目标列采用固定定位，横向查看时仍可辨认。原始英文表头保留，显示类型、字段角色及辅助含义。上传文件的数值列、设备配置类别列均可作为候选特征，日期和产品编号保留为索引。</p>
+<h3>样本与衍生字段</h3><p>平台样本展示日度模型输入，包括 <code>TIME_KEY / PRODUCT_ID / TARGET_LAG_1 / TARGET_LAG_7 / TARGET_LAG_14 / ROLLING_MEAN_7 / ROLLING_STD_7 / DAY_OF_WEEK</code>，并提供 AR 综合良率、良品产出量和 BR G 级良率目标。平台列和记录为原型数据契约示意，正式环境应由后端按已发布口径生成。</p>
+<p>上传文件展示实际原始记录，并追加目标的前 1 日 / 前 7 日衍生列；保留缺失值显示，不伪造前几天的历史值。衍生字段与原始字段重名时加前缀避免覆盖。切换文件目标后会重新计算汇总序列、单位与衍生样本，已保存的历史结果不变。</p>
+<h3>开始预测</h3><p>有数据、至少一个特征和一个目标，且数据划分配置有效时，点击“开始预测”即运行，并将字段配置冻结进本轮结果。移除“已核对数据”和“特征已可获取”两个勾选项，不再要求用户重复承诺。目标与特征互斥、无可用数据和缺少字段仍由系统校验；无效配置就近提示。预测时特征可用性属于数据与模型的校验责任，不能因为点击按钮就认定已完成因果验证或排除泄漏。</p>
+<h2 id="partition">2.1 数据集划分与交叉验证</h2>
+<p>入口位于“核对数据与字段”页，紧接已选特征。默认按时间先后以 70% / 15% / 15% 分配训练、验证、测试，默认使用独立验证集；这些比例是原型的初始配置，不是平台准确率承诺或强制规范。</p>
+<table><tr><th>设置</th><th>用户操作</th><th>实际规则</th></tr>
+<tr><td>按时间比例</td><td>分别输入训练 / 验证 / 测试百分比</td><td>均大于 0，合计 100%；训练和验证按日样本数向下取整，剩余分配测试。示例 119 天得到 83 / 17 / 19 天。</td></tr>
+<tr><td>指定日期范围</td><td>编辑三段各自的开始 / 结束日期</td><td>起止包含边界，必须在全量有效样本范围内，按训练 → 验证 → 测试排序且不重叠。可留空档，显示未使用样本数。</td></tr>
+<tr><td>全量样本口径</td><td>查看日期、各段数量和色条</td><td>采用当前数据源、目标、产品和时间筛选后的全量日度序列；同日多条文件记录先按已确认方式聚合。预览 10 / 20 / 50 条不改变划分。</td></tr>
+<tr><td>时间序列交叉验证</td><td>选择验证方式后输入折数、窗口、间隔</td><td>支持 2–5 折，窗口 1–60 天，间隔 0–30 天；默认 3 折，窗口 min(预测天数,14)，间隔 0。训练窗口逐折扩展，验证窗口等长，范围都在指定训练集内。</td></tr>
+<tr><td>恢复推荐</td><td>点击恢复推荐</td><td>回到 70 / 15 / 15、独立验证集；不修改特征、目标或历史结果。</td></tr>
+<tr><td>保存 / 执行</td><td>保存选择，或直接开始预测</td><td>输入即保存草稿。开始预测时再次检查并冻结 partitionPlan，不增加额外勾选或弹窗。</td></tr></table>
+<h3>三类数据的用途</h3><p><b>训练集：</b>学习参数；开启交叉验证时只在其内部滚动选择参数。<b>独立验证集：</b>比较候选方案或选型复核。<b>测试集：</b>最后一次性能核验，不参与交叉验证或按成绩反复选型。若团队希望将训练与验证合并为更大的调参区，应另行调整约定；本版三段含义在页面和快照中保持一致。</p>
+<h3>滚动验证规则与校验</h3><p>设训练集有 N 天，K 折，每折 W 天，间隔 G 天。第 i 折（从 0 开始）的验证窗口从 N−K×W+i×W 开始；训练集从训练区间首日延伸到该窗口之前 G 天。每折只读取对应训练窗口的已知数据。训练集最少 14 天、验证和测试各至少 1 天；交叉验证首折训练最少 14 天，即 N ≥ 14+K×W+G。这是本原型的操作校验门槛，正式模型所需最少样本数应由后端返回。</p>
+<p>非法日期、超出范围、重叠、比例和错误以及交叉验证样本不足都会在该区块就近提示并阻止运行。返回修改数据范围后，比例模式按新范围计算；自定义日期保留供用户调整，不能静默截断。不同来源、不同目标的无效日处理仍以数据核对阶段为准。</p>
+<p>方法依据：<a href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TimeSeriesSplit.html">scikit-learn TimeSeriesSplit</a> 描述了按时间推进、训练窗口累积及 gap；<a href="https://scikit-learn.org/stable/modules/cross_validation.html#cross-validation-of-time-series-data">时间序列交叉验证说明</a> 解释了随机打乱时序数据可能影响泛化评估。本版只提供时间顺序划分，不引入随机 K 折。</p>
+<h3>结果与计算边界</h3><p>结果中的数据范围、样本数、测试明细日期及各折定义来自冻结的 partitionPlan；交叉验证 MAE 显示各折均值 ± 总体标准差（不是置信区间），同时展示各折 MAE / RMSE。独立验证和最终测试分开呈现。</p>
+<ul><li><b>平台来源：</b>数据、候选模型与指标仍为确定性生成的原型样例。新功能落实了划分配置和结果关联，但未连接数据库、后端训练或真实交叉验证任务。</li><li><b>上传 CSV：</b>使用真实目标日度序列计算 7 天同期基线。每折的预测只使用该折训练期的已知值，冻结预测后再对比整段验证值；没有使用验证期实际值更新预测。</li><li><b>文件独立验证 / 测试：</b>独立验证基于训练集；最终测试基于已选训练 + 验证数据，整段测试实际值只用于算误差。测试指标冻结后，未来预测可用已选训练、验证、测试的已知历史更新同期基线。日期空档不补造记录，星期模式取所选历史中最近已知值。</li><li><b>参考区间：</b>从各评估窗口之前的训练同期残差估计，按预测周数扩宽；未作概率校准。模型未进行多变量训练，所选特征仍仅保存为配置。</li></ul>
+<h3>后端新增契约</h3><p>请求同时保存 dataSplit（用户设置）与 partitionPlan（最终划分），后端用 datasetRevision 对应全量数据重新验证日期、样本量和行标识，不能信任前端计数。partitionPlan 包含 universe、train、validation、test、unused、method、cv.folds[]、cv.window、cv.gap、order 和 frozenAt。响应返回独立验证 / 测试明细、逐折预测与 MAE / RMSE、指标汇总和真实执行状态。</p><p>正式流水线中缺失值处理、标准化、特征选择等预处理必须分别在各折训练子集上拟合，不能先对全量数据拟合再划分；跨边界标签窗口、标签成熟时间和生产数据延迟需要服务端检查并设置相应间隔。前端日期划分不能代替这些检查。</p>
+<h2 id="revise">3. 统一底部对话，修改当前条件</h2><p><b>消息区分：</b>用户在右侧，AI 在左侧，通过方向、头像、名称和气泡底色同时区分，不依赖颜色一种线索。附件引用跟随其所属用户消息；AI 的条件卡和结果卡保持白色内容区。默认定位保留本轮对话身份，不再直接跳到卡片顶端而隐藏发言人。长卡片继续在对话区滚动查看，底部输入不跟随滚动。</p><p>发起页、条件确认页、结果页使用同一个底部输入组件。对话与结果内容在上方独立滚动；确认卡中仅保留字段和“保存待确认 / 确认并预览数据”操作。用户直接在底部输入“预测改为 7 天，区间改为 95%”或补充分析要求，再点击“发送”或按 Enter；Shift + Enter 换行。快捷建议只填入，不自动发送。发送修改后重新整理条件，核对数据后再生成新结果；历史结果不覆盖。空输入和无效参数在底部就近提示，保留原条件和输入内容。运行中输入与发送禁用，但位置保持不变。</p>
+<table><tr><th>要求示例</th><th>本版交互行为</th></tr><tr><td>预测改为 7 天，区间改为 95%，关注线设为 96</td><td>更新三个对应字段，展示原值 → 新值。</td></tr><tr><td>产品换成 B8A043W4V601；历史时间 2026-08-01 至 2026-11-10</td><td>校验产品候选与有效日期，回填字段；历史长度仍需符合后续建模校验。</td></tr><tr><td>目标列改为 OUTPUT_QTY</td><td>平台切换到产出量指标；文件切换到同名数值列并更新映射。未知字段提示核对原始表头。</td></tr><tr><td>特征仅保留 TARGET_LAG_1,TARGET_LAG_7</td><td>记录特征选择，下次数据预览应用；未知、索引或目标字段不可进入特征。</td></tr><tr><td>添加对低于目标日期的解释</td><td>作为补充分析要求保留，随当前配置、后续结果及导出留存，不把未执行内容说成已完成。</td></tr><tr><td>任务名称改为 AR 周度预测</td><td>更新页内名称和任务列表标题。</td></tr><tr><td>只显示验证对比图</td><td>调整后续结果的图表显示配置，明细始终保留。</td></tr></table>
+<p>每次提交只新增一轮用户要求与助手确认，显示“已按你的要求重新整理”摘要。字段未涉及的设置保留；原始指令写入修订记录。随后仍要走“预览数据 → 人工核对 → 开始预测”。结果页修改以当前查看的结果版本为基准，不会偷偷改动另一版本。</p>
+<div class="note">交互表现面向智能体产品设计。本 HTML 使用有限规则识别上述明确修改表达，并非接入真实大模型。无法映射的自由要求以补充要求保留、等待确认；不宣称已执行所有自然语言需求。正式服务应返回结构化字段差异、未解决项与说明，供用户核对。</div>
+<h2 id="result">4. 输出、版本与异常恢复</h2><p>结果继续展示趋势、参考范围、MAE / RMSE、验证明细、解读和下一步建议；新增已确认的目标列、特征列表及补充要求。历史版本保留当时的来源、字段、条件和结果快照。新指令或目标切换不覆盖旧结果。</p>
+<p>JSON 导出包含完整 <code>modelingSelection</code>、字段映射、修订要求及结果。CSV 的预测 / 验证行增加目标列、特征列、补充要求及来源 / 版本信息；可能被电子表格解释为公式的文本继续转义。</p>
+<p>从核对页返回可继续改条件。读取期间返回会使当前读取标识失效，迟到完成不会把用户带回旧核对页。选目标的异步文件读取也核对当前任务、页面与请求标识。任务暂停、重试和刷新继续保留已有版本；重试仍经过数据核对。</p>
+<h2 id="files">5. TXT / CSV 上传与引用</h2><p>沿用 v8：支持 UTF-8 TXT / CSV，每份 2 MB、每任务最多 3 份；表格最多 50,000 行、100 列。文件预览、用途选择、引用勾选、同名检查、格式检查、无效行处理、示例下载及 IndexedDB 本机保存保留。</p>
+<p>CSV 或表格型 TXT 可作数值数据，纯文本 TXT 可作字段 / 业务元数据说明。每轮仅一份表格作分析数据，其他附件可作背景。文件引用不自动提交，说明文字不是系统指令，也不能直接执行 SQL 或代码。已经被历史对话引用的文件保留供回看。</p>
+<p>文件确认页仍允许修改日期、数值、产品、单位、百分比格式和汇总方式；切换目标后新增“数值（无单位）”选项。无效行需要用户确认排除，缺失日期不会自动补齐。文件基线至少需要 28 天连续有效历史；平台路径至少 78 天。</p>
+<h2 id="sources">数据源维护与识别说明</h2>
+<div class="flow"><span>数据源列表</span>→<span>连接 / 选表</span>→<span>AI识别</span>→<span>人工修正</span>→<span>确认发布</span></div>
+<h3>入口与列表</h3><p>位于“AI资产管理 / 数据源管理”，独立于预测任务。按名称 / 数据库和状态查询；提供新建、维护、启用 / 停用与删除。列表展示数据库类型、库名、连接状态、表数量、口径状态和发布版本。预置一个已发布数据源和一个待识别数据源。</p>
+<h3>连接与数据表</h3><p>新建、维护连接使用右侧抽屉。可编辑名称、ClickHouse 服务地址、端口、数据库、访问凭证引用、用途说明和接入表。至少选一张表；必填、数据库名和端口范围均校验。测试当前配置通过后才能保存。只读查询权限为演示约束，凭证用引用名表示，不输入数据库密码。</p><p>原型表清单为 AR / BR 两张预置表。正式环境应在连接成功后拉取真实元数据。地址含 <code>fail</code> 可触发模拟连接失败。连接身份或表范围改变后，原口径暂不可用于新预测，必须重新识别、修正并发布；历史版本保留。</p>
+<h3>AI识别后的说明界面</h3><table><tr><th>区域</th><th>用户可修改内容</th><th>保存 / 生效规则</th></tr>
+<tr><td>数据源概览</td><td>大模型对整份数据源的理解：数据内容、时间粒度、关键字段及用途</td><td>修改自动保存为草稿</td></tr>
+<tr><td>字段识别说明</td><td>按表切换；原始英文表头、类型、样本供核对。可改中文业务含义、字段用途、处理逻辑说明</td><td>保留原始字段名，不把修改说明当作改数据库结构；改过的行标为人工修正</td></tr>
+<tr><td>业务指标口径</td><td>指标名称；日期字段和解析格式；产品、数量、等级字段映射；合格 / 不良等级；TIME_TYPE / INDEX_TYPE 筛选值；空值策略；指标说明</td><td>公式预览随结构化字段变化；查询逻辑只作示意，不执行 SQL</td></tr>
+<tr><td>说明预览</td><td>集中查看数据源理解、所有字段解释和指标规则</td><td>草稿预览与已发布版本查看互相独立</td></tr>
+<tr><td>发布版本</td><td>查看各版本说明；历史版本恢复为草稿</td><td>恢复草稿不会覆盖当前已发布版本，必须再次发布才生效</td></tr></table>
+<p><b>字段说明与执行口径分开：</b>业务含义、处理说明和指标说明用于解释；日期 / 产品 / 数量 / 等级映射、等级集合、固定筛选和空值策略为结构化规则，正式后端应据此编译查询。直接修改说明文字不会执行任意代码或 SQL。</p>
+<p>当前开发包支持的指标模板仍为 AR 综合良率、AR 良品产出量、BR G 级良率。本版允许修正这些模板的字段映射、取值及名称，不新增算法或任意公式执行能力。</p>
+<h3>发布校验</h3><ul><li>数据源总体说明、字段业务含义、指标名称、合格等级及时间粒度不得为空。良率模板必须有不良等级。</li><li>合格与不良等级不能重叠；等级用 <code>|</code> 分隔，不允许空项。<code>A,T,Q</code> 在当前源码样例中是一个完整枚举，不能按逗号误拆。</li><li>指标所用字段必须存在于来源表，并与字段用途一致；数量映射必须对应数值类型。指标来源表必须在当前接入范围内。</li><li>发布前必须填写说明并勾选“已确认字段映射、指标公式及等级取值”。成功后生成不可变版本，启用数据源供预测选择。</li></ul>
+<h3>版本与预测联动</h3><p>未发布的修改始终保存为草稿，预测继续使用已发布版本。确认卡选择来源时绑定 sourceId、version 和 definition 快照；切换到新版本必须显式选择。历史结果不随数据源后续修改变化。CSV 记录来源与版本，JSON 保存完整识别说明及结构化规则。</p><p>停用后阻止发起新预测，历史结果仍可查看。被任务或结果引用的数据源不能删除，可停用；未引用的数据源在二次确认后可删除。取消识别不会在稍后写入识别结果。</p>
+<h3>后端新增接口建议（当前开发包未实现）</h3><table><tr><th>能力</th><th>建议契约</th></tr><tr><td>连接维护与元数据</td><td>数据源 CRUD、连接测试、凭证引用、库表 / 字段 / 枚举样本读取。前端不直接连接数据库，不保管密码。</td></tr><tr><td>字段识别</td><td>输入表结构、样本和已知业务背景；返回 overallSummary、fields[{name,type,sample,meaning,role,logic}]、metricRules[]。每次识别任务带 runId，取消和过期返回不能覆盖新草稿。</td></tr><tr><td>草稿与版本</td><td>保存草稿、校验规则、人工确认发布、不可变版本查询、启停、引用检查。建议增加 revision 进行并发校验。</td></tr><tr><td>预测执行</td><td>在现有 agent run 的上下文中传 sourceId 和已发布 schemaVersion，由服务端加载规则快照并构建只读查询。禁止把未确认的模型说明直接视为执行权限。</td></tr></table>
+<div class="note warn">连接测试、AI识别和预测均使用本地模拟。真实环境需要后端读取元数据、调用大模型生成说明、校验发布口径并按规则查询。平台数据预测仍为本地样例；文件路径计算上传目标列的同期基线，不会因为修改说明或选择特征而实际训练多变量模型。</div><h2 id="boundary">6. 实际实现边界与文案位置</h2><table><tr><th>部分</th><th>实际行为</th><th>尚待正式接入</th></tr><tr><td>页面与流程</td><td>直接进入、页内名称、部分数据核对、拖选与目标切换、字段确认、要求修订、结果版本、导出均为可交互实现。</td><td>生产权限、任务调度、服务端持久化。</td></tr><tr><td>平台样本与预测</td><td>日度样本、加载状态和模型输出为本地预置 / 确定性生成，不连接真实数据库。</td><td>按筛选条件查询、抽样、质量检查及训练任务。</td></tr><tr><td>上传文件</td><td>解析真实文件、预览真实记录、目标切换与实际日度汇总，并按目标列计算 7 天同期基线和历史误差。</td><td>所选多个特征的真实训练、参数优化及外生特征未来取值处理。</td></tr><tr><td>特征选择</td><td>选择生效到本轮配置、页面和导出快照；不宣称这些列已经用于机器学习拟合。</td><td>当前本地同期基线仅依赖目标历史值。改变特征列表不会单独改变基线数值；正式训练须使用确认快照。</td></tr><tr><td>指令理解 / AI识别</td><td>本地规则回填和字段解释样例；原始指令、明确字段变更与补充要求保留。</td><td>真实大模型、完整自由语言解析、需求执行与结果重生成。</td></tr></table>
+<p>产品页面按用户要求去掉“原型演示”等技术说明。该操作不表示已经连接后台或真实训练完成：此处集中记录边界，JSON 导出继续保留 <code>demo</code> 与计算来源说明。样式与结果不用于证明线上实现。</p>
+<h2 id="contract">7. 后端对接建议</h2><p>建议把“确认条件”和“确认数据”分成两个服务阶段。第一阶段返回样本与 schema；第二阶段在用户确认后接收不可变字段配置。预测服务不得仅根据页面默认值静默推断目标或特征。</p>
+<pre>{
+  "datasetRevision": "immutable-dataset-revision",
+  "sourceId": "source-or-file-id",
+  "query": {"start": "2026-07-01", "end": "2026-11-10", "product": "..."},
+  "sample": {"limit": 50, "columns": [], "rows": [], "totalRows": 0},
+  "modelingSelection": {
+    "targetColumn": "YIELD_RATE",
+    "featureColumns": ["VOLTAGE_AVG", "CURRENT_AVG", "RECIPE_ID"],
+    "featureAvailability": "requires_known_inputs",
+    "confirmedAt": "..."
+  },
+  "revisionInstruction": "预测改为7天，添加异常日期说明",
+  "additionalRequirements": "添加异常日期说明"
+}</pre>
+<p>后端验证列存在、角色互斥、类型、缺失比例、字段可获得时点、样本范围及来源版本。样本预览、训练数据与导出必须共享同一数据版本；回看旧结果不能加载最新草稿。前端只是确认界面，不能代替权限或防泄漏检查。</p>
+<p>正式修订接口建议返回 <code>fieldChanges / retainedRequirements / unresolvedItems / requiresDataRefresh</code>。需要重新获取数据的字段变化应取消旧确认；取消、返回或更换任务后，迟到响应不能覆盖新的界面状态。</p>
+<h2 id="style">样式与实现来源</h2>
+<p>既有原型采用的 iai-web 提交：<code>1d71463562e3de17597a481a3d9bfcc991f78bb5</code>，工作区无源码改动。参考对象如下：</p>
+<table><tr><th>来源</th><th>采用内容</th></tr>
+<tr><td><code>src/settings.js</code>、<code>src/layout/fullHeaderLayout.vue</code></td><td>工业 AI 平台名称、fullHeader 页面组织、48px 顶栏、blue 主题</td></tr>
+<tr><td><code>src/layout/components/AppMain.vue</code>、<code>src/styles/custom.styl</code></td><td>白色内容区、12px 主容器圆角、0 4px 10px / 6% 阴影、24px 内容内边距</td></tr>
+<tr><td><code>src/views/trainingMissionManagement/trainingMission/index.vue</code></td><td>顶部筛选表单、分隔线、右侧新建按钮、任务表格的组织方式</td></tr>
+<tr><td><code>src/lang/zh.js</code>、<code>src/router/modules/trainingMission.js</code>、<code>src/icons/menu/</code></td><td>实际菜单文案、模块定位及 SVG 图标</td></tr>
+<tr><td><code>boe-element-plus@2.7.9</code> 原始 CSS、LayoutPageAym configs、品牌资产</td><td>内嵌完整原始组件 CSS；192px 侧栏、54×24 BOE logo、AI 后缀及底图；蓝色导航源渐变、选中背景 #0068ce、主色 #0081ff</td></tr>
+</table>
+<p>版本依据：当前 <code>package.json</code> 指定 ^2.5.0，<code>package-lock.json</code> 和 <code>yarn.lock</code> 均锁定 2.7.9；同仓库 pnpm-lock 仍为 2.2.12，本次沿用与当前声明匹配的 2.7.9。未安装或更新生产依赖。原型使用原生 DOM 对离线表单做适配，未加载生产 Vue 组件运行时；新对话和结果区为本次业务布局。</p>
+<p>开发包核对位置：<code>web/chat.html</code>、<code>web/chat.js</code>、<code>web/chat.css</code>、<code>app/main.py</code>、<code>app/agent_harness.py</code>、<code>app/datasets.py</code>、<code>app/modeling.py</code>。已在后台浏览器查看开发包原始入口，使用本地静态资源及状态桩，未启动其服务或连接数据库。</p>
+
+<h3>草稿保存与降级</h3><p>旧提示的含义是浏览器无法写入本地草稿，不是数据源连接或预测计算报错。具体异常可能由存储策略或容量限制等引起，截图本身不能确定原因。v10 在任务输入过程中不弹出保存失败消息，按 localStorage → sessionStorage → 当前页面内存降级。读取时优先恢复本次会话中的新草稿；本地存储恢复可用后写入本地并清理对应会话副本，不清空其他数据。只有降级时才显示“会话草稿”或“仅当前页面保留”。后者刷新或关闭后不保留；点手动保存也不会误报成功。数据源资产模块未在本次调整范围内。生产版本的持久化应由后端实现。</p><h2 id="qa">8. 使用与验证</h2><p>双击配套 HTML 使用，推荐 Chrome / Edge。无需服务器、登录或外部资源。v12 使用独立存储命名空间以隔离新增划分配置；旧 v11 文件及其数据保留，可直接打开回退。</p><p>推荐路径：任务列表 → 新建 → 页内修改名称 → 选择场景或上传 CSV / TXT → 发送 → 在底部对话框输入修改要求 → 查看差异 → 确认并预览数据 → 表头拖选 / 切换目标 → 设置数据划分与验证方式 → 开始预测 → 查看完整结果 → 再次输入要求 → 核对并生成新版本。</p><p>配套验证报告记录语法、桌面布局、文件数据、列选择和版本操作的实际检查；JScript / ES3 只表示源码可解析，运行仍依赖现代浏览器的 Pointer Events、IndexedDB、FileReader、CSS Sticky / Grid 等能力，不声明兼容旧版 IE。</p><footer>20261112-v12 · 以 v11 为基准，保留原版本与 iai-web 源码。功能边界以本文为准。</footer></main></body></html>

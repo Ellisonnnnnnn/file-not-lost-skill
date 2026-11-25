@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>完整结果与建议抽屉 · 信息优化方案</title>
+<style>
+:root{
+  --blue:#0081FF; --blue-bg:#E9F3FF; --blue-line:#B9D8FF;
+  --n8:#303133; --n7:#4B5563; --n6:#909399; --n5:#737985;
+  --line:#E4E7ED; --line-2:#EBEEF5; --bg:#F5F7FA;
+  --amber:#B8741A; --amber-bg:#FFF7E8; --amber-line:#F5D9A8;
+  --green:#1F9D63; --green-bg:#EAF7F0;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;}
+body{
+  background:#EDF0F5;
+  font:14px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  color:var(--n8);
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1240px;margin:0 auto;padding:28px 24px 64px;}
+
+/* ---------- 页头 ---------- */
+.head h1{margin:0 0 6px;font-size:20px;font-weight:600;letter-spacing:.2px;}
+.head p{margin:0;color:var(--n5);font-size:13px;}
+.diag{margin:16px 0 18px;padding:14px 16px;background:#fff;border:1px solid var(--line);border-radius:8px;}
+.diag>b{display:block;font-size:12.5px;color:var(--n7);margin-bottom:8px;}
+.diag ol{margin:0;padding-left:18px;color:var(--n5);font-size:12.5px;line-height:1.95;}
+.diag code{font:12px/1 Consolas,monospace;background:#F2F4F7;padding:1px 4px;border-radius:3px;color:var(--n7);}
+
+/* ---------- tabs ---------- */
+.tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+.tabs button{
+  font:13px/1 inherit;font-family:inherit;padding:9px 14px;border-radius:6px;border:1px solid var(--line);
+  background:#fff;color:var(--n7);cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:.15s;
+}
+.tabs button b{font-weight:600;color:var(--n6);font-size:12px;}
+.tabs button:hover{border-color:#AFB8C6;}
+.tabs button.on{background:var(--blue);border-color:var(--blue);color:#fff;}
+.tabs button.on b{color:rgba(255,255,255,.75);}
+
+.pick{display:flex;gap:12px;padding:14px 16px;background:#F3F8FF;border:1px solid #D9E9FF;border-radius:8px;margin-bottom:16px;}
+.pick-l{font-size:12.5px;line-height:1.8;color:var(--n7);}
+.pick-l p{margin:0;}
+.pick-l p+p{margin-top:5px;}
+.pick-l b{color:var(--n8);font-weight:600;}
+.pick .badge{display:inline-block;height:20px;line-height:20px;padding:0 7px;border-radius:3px;background:var(--blue);color:#fff;font-size:11px;margin-right:6px;vertical-align:1px;}
+
+.pane{display:none;}
+.pane.on{display:block;}
+
+.pane-head{margin:0 0 12px;}
+.pane-head h2{margin:0 0 4px;font-size:15px;font-weight:600;}
+.pane-head h2 span{color:var(--n6);font-weight:400;font-size:13px;margin-left:8px;}
+.pane-head p{margin:0;font-size:12.5px;color:var(--n5);}
+
+/* ---------- 舞台 ---------- */
+.stage{
+  position:relative;height:780px;border:1px solid var(--line);border-radius:10px;overflow:hidden;
+  background:linear-gradient(180deg,#F7F9FC,#EFF2F7);
+}
+.stage-bg{position:absolute;inset:0;padding:24px 0 0 26px;}
+.ghost{width:238px;padding:14px;background:#fff;border:1px solid var(--line-2);border-radius:8px;}
+.ghost .l{height:9px;width:64%;background:#E9EDF3;border-radius:3px;margin-bottom:9px;}
+.ghost .l.s{width:40%;height:8px;}
+.ghost .num{font-size:22px;color:var(--n8);font-weight:600;margin:2px 0 6px;}
+.ghost .num small{font-size:11px;color:var(--n6);font-weight:400;margin-left:3px;}
+.ghost .row{display:flex;gap:6px;margin-top:10px;}
+.ghost .row span{height:18px;background:#EEF4FD;color:#3E6EA8;font-size:11px;border-radius:3px;padding:0 6px;line-height:18px;}
+.mask{position:absolute;inset:0;background:rgba(31,38,48,.26);}
+
+/* ---------- 抽屉 ---------- */
+.drawer{
+  position:absolute;top:0;right:0;bottom:0;left:0;
+  background:#fff;box-shadow:-18px 0 40px rgba(31,38,48,.12);
+  display:flex;flex-direction:column;
+}
+.d-head{flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:14px 24px;border-bottom:1px solid var(--line);}
+.d-title h2{margin:0;font-size:15px;font-weight:600;letter-spacing:.2px;}
+.d-sub{margin-top:2px;font-size:12px;color:var(--n6);}
+.d-actions{margin-left:auto;display:flex;align-items:center;gap:10px;flex:0 0 auto;}
+.xbtn{width:24px;height:24px;border:0;background:none;border-radius:4px;color:var(--n6);cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.xbtn:hover{background:#F2F4F7;color:var(--n7);}
+.d-body{flex:1;min-height:0;overflow:auto;padding:18px 24px 22px;}
+.d-foot{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:12px 24px;border-top:1px solid var(--line);background:#fff;}
+.d-foot .sum{font-size:12px;color:var(--n5);}
+.d-foot .acts{margin-left:auto;display:flex;gap:8px;}
+
+.btn{height:30px;padding:0 14px;border-radius:4px;border:1px solid var(--line);background:#fff;color:var(--n7);font:13px/1 inherit;font-family:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:6px;}
+.btn:hover{border-color:#AFB8C6;color:var(--n8);}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff;}
+.btn.primary:hover{background:#0073E6;border-color:#0073E6;color:#fff;}
+.btn.mini{height:26px;padding:0 10px;font-size:12px;}
+.linkbtn{border:0;background:none;padding:0;font:12px/1.4 inherit;font-family:inherit;color:var(--blue);cursor:pointer;}
+.linkbtn:hover{text-decoration:underline;}
+.tag{display:inline-flex;align-items:center;height:20px;padding:0 7px;border-radius:3px;font-size:11px;line-height:1;background:#F2F4F7;color:var(--n7);}
+.tag.blue{background:var(--blue-bg);color:#0066CC;}
+.tag.green{background:var(--green-bg);color:var(--green);}
+.tag.grey{background:#F4F5F7;color:var(--n6);}
+.mono{font-family:Consolas,monospace;}
+
+/* 通用 section 头 */
+.sec-h{display:flex;align-items:center;gap:8px;margin:0 0 8px;}
+.sec-h h3{margin:0;font-size:13.5px;font-weight:600;color:var(--n8);}
+.sec-h .r{margin-left:auto;font-size:12px;color:var(--n6);}
+
+/* ============ 方案 A：结论前置 ============ */
+.a-sum{display:flex;align-items:stretch;gap:0;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff;}
+.a-sum-main{flex:0 0 auto;padding:12px 18px;background:linear-gradient(180deg,#F7FBFF,#F1F7FF);border-right:1px solid var(--line);}
+.a-sum-main .k{display:block;font-size:11.5px;color:var(--n5);margin-bottom:2px;}
+.a-sum-main{min-width:132px;}
+.a-sum-main .v{font-size:26px;font-weight:600;line-height:1.1;letter-spacing:-.4px;color:var(--n8);white-space:nowrap;}
+.a-sum-main .v i{font-size:13px;font-weight:400;color:var(--n6);font-style:normal;margin-left:2px;}
+.a-sum-item{flex:1 1 auto;padding:12px 14px;display:flex;flex-direction:column;justify-content:center;gap:2px;border-right:1px solid var(--line-2);}
+.a-sum-item .k{font-size:11.5px;color:var(--n5);}
+.a-sum-item .v{font-size:17px;font-weight:600;line-height:1.2;white-space:nowrap;}
+.a-sum-item .v small{font-size:11px;font-weight:400;color:var(--n6);margin-left:2px;}
+.a-sum-item .s{font-size:11.5px;color:var(--n6);}
+.a-sum-tag{flex:0 0 auto;padding:0 16px;display:flex;align-items:center;}
+.a-meta{display:flex;align-items:center;gap:8px;margin:12px 0 14px;font-size:12px;color:var(--n5);flex-wrap:wrap;}
+.a-meta .sep{color:#D5D9E0;}
+.a-chart{margin-bottom:6px;}
+.a-chart-top{display:flex;align-items:center;gap:8px;margin-bottom:2px;}
+.a-chart-top h3{margin:0;font-size:13px;font-weight:600;}
+.inf{position:relative;display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;border:1px solid #C9CFDA;color:var(--n6);font-size:10px;font-style:normal;cursor:default;}
+.inf .tip{display:none;position:absolute;left:50%;top:-6px;transform:translate(-50%,-100%);width:280px;padding:9px 11px;background:#303133;color:#fff;border-radius:6px;font-size:12px;line-height:1.55;z-index:20;font-weight:400;}
+.inf:hover .tip{display:block;}
+.a-tbl-head{display:flex;align-items:center;gap:8px;margin:14px 0 6px;}
+.a-tbl-head h3{margin:0;font-size:13px;font-weight:600;}
+.a-tbl-head .r{margin-left:auto;font-size:12px;color:var(--n6);}
+table.dt{width:100%;border-collapse:collapse;font-size:12.5px;}
+table.dt th{text-align:left;font-weight:500;color:var(--n5);background:#FAFBFC;padding:7px 10px;border-bottom:1px solid var(--line-2);font-size:12px;}
+table.dt td{padding:7px 10px;border-bottom:1px solid #F3F5F8;color:var(--n7);}
+table.dt td.num,table.dt th.num{text-align:right;font-variant-numeric:tabular-nums;}
+table.dt tr:last-child td{border-bottom:0;}
+.fold{border:1px solid var(--line);border-radius:6px;background:#FAFBFC;margin-top:14px;}
+.fold-h{width:100%;display:flex;align-items:center;gap:8px;padding:10px 12px;border:0;background:none;font:13px/1.4 inherit;font-family:inherit;color:var(--n8);cursor:pointer;text-align:left;}
+.fold-h b{font-weight:600;flex:0 0 auto;}
+.fold-h .sm{color:var(--n5);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
+.fold-h .cv{flex:0 0 auto;color:var(--n6);font-size:12px;}
+.fold-b{display:none;padding:0 12px 12px;font-size:12.5px;color:var(--n7);line-height:1.75;}
+.fold.open .fold-b{display:block;}
+.fold-b p{margin:0 0 8px;}
+.fold-b p:last-child{margin:0;}
+
+/* ============ 方案 B：摘要卡 + 分段折叠 ============ */
+.b-hero{display:flex;gap:0;border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+.b-hero-l{flex:0 0 268px;padding:16px 18px;background:linear-gradient(160deg,#F6FAFF,#EDF5FF);border-right:1px solid var(--line);}
+.b-hero-l .k{font-size:12px;color:var(--n5);}
+.b-hero-l .big{font-size:38px;font-weight:600;line-height:1.05;letter-spacing:-1px;margin:6px 0 4px;}
+.b-hero-l .big i{font-size:15px;font-weight:400;font-style:normal;color:var(--n6);margin-left:3px;}
+.b-hero-l .tr{font-size:12px;color:var(--green);}
+.b-hero-r{flex:1 1 auto;padding:14px 18px;display:flex;flex-direction:column;justify-content:center;gap:8px;}
+.b-hero-r .li{display:flex;gap:8px;font-size:12.5px;line-height:1.6;color:var(--n7);}
+.b-hero-r .li b{flex:0 0 44px;color:var(--n8);font-weight:600;}
+.b-chips{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 14px;}
+.b-chips span{height:22px;line-height:22px;padding:0 8px;border-radius:11px;background:#F5F7FA;color:var(--n5);font-size:11.5px;}
+.b-sec{border:1px solid var(--line);border-radius:6px;margin-bottom:10px;overflow:hidden;}
+.b-sec>.h{display:flex;align-items:center;gap:8px;padding:10px 12px;background:#fff;cursor:pointer;font-size:13px;font-weight:500;}
+.b-sec>.h .n{width:18px;height:18px;border-radius:50%;background:#EFF3F9;color:var(--n5);font-size:10.5px;display:flex;align-items:center;justify-content:center;flex:0 0 auto;font-weight:500;}
+.b-sec>.h .meta{margin-left:auto;font-size:11.5px;color:var(--n6);font-weight:400;}
+.b-sec>.h .cv{color:var(--n6);font-size:12px;}
+.b-sec>.c{display:none;padding:4px 12px 12px;border-top:1px solid var(--line-2);}
+.b-sec.open>.c{display:block;}
+
+/* ============ 方案 C：左栏导航 ============ */
+.c-wrap{display:flex;height:100%;}
+.c-nav{flex:0 0 132px;border-right:1px solid var(--line);padding:6px 8px;background:#FAFBFC;}
+.c-nav button{display:block;width:100%;text-align:left;padding:8px 10px;border:0;border-radius:5px;background:none;font:12.5px/1.4 inherit;font-family:inherit;color:var(--n7);cursor:pointer;margin-bottom:2px;}
+.c-nav button:hover{background:#F0F3F8;}
+.c-nav button.on{background:var(--blue-bg);color:#0066CC;font-weight:500;}
+.c-nav .grp{font-size:10.5px;color:#A8AFBA;padding:10px 10px 4px;letter-spacing:.5px;}
+.c-main{flex:1 1 auto;min-width:0;padding:16px 22px;overflow:auto;}
+.c-sec{margin-bottom:16px;}
+.c-kv{display:flex;gap:10px;margin:0 0 12px;}
+.c-kv .b{flex:1 1 0;padding:10px 12px;border:1px solid var(--line);border-radius:6px;}
+.c-kv .b .k{font-size:11.5px;color:var(--n5);}
+.c-kv .b .v{font-size:18px;font-weight:600;margin-top:2px;}
+.c-kv .b .v small{font-size:11px;font-weight:400;color:var(--n6);margin-left:2px;}
+.c-lead{padding:11px 13px;background:#F7FBFF;border:1px solid #DCEBFF;border-radius:6px;font-size:12.5px;line-height:1.7;color:var(--n7);margin-bottom:12px;}
+.c-lead b{color:var(--n8);}
+
+/* ============ 方案 D：问答式 ============ */
+.d-hero{padding:14px 16px;background:#F7F9FC;border:1px solid var(--line);border-radius:8px;}
+.d-hero .who{display:flex;align-items:center;gap:7px;margin-bottom:7px;}
+.d-hero .who .dot{width:18px;height:18px;border-radius:50%;background:var(--blue);color:#fff;font-size:10px;display:flex;align-items:center;justify-content:center;font-weight:600;}
+.d-hero .who b{font-size:12px;color:var(--n7);font-weight:600;}
+.d-hero .who .tag{margin-left:auto;}
+.d-hero p{margin:0;font-size:13.5px;line-height:1.8;color:var(--n8);}
+.d-hero p em{font-style:normal;font-weight:600;color:#0066CC;}
+.qa{margin-top:12px;border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+.qa-i+.qa-i{border-top:1px solid var(--line-2);}
+.qa-h{width:100%;display:flex;align-items:center;gap:8px;padding:11px 13px;border:0;background:#fff;font:13px/1.4 inherit;font-family:inherit;color:var(--n8);cursor:pointer;text-align:left;}
+.qa-h .q{width:16px;height:16px;border-radius:3px;background:#EEF3FA;color:#7A8797;font-size:10px;display:flex;align-items:center;justify-content:center;flex:0 0 auto;font-weight:600;}
+.qa-h .pill{margin-left:auto;height:19px;line-height:19px;padding:0 7px;border-radius:3px;font-size:11px;background:var(--green-bg);color:var(--green);}
+.qa-h .pill.amber{background:var(--amber-bg);color:var(--amber);}
+.qa-h .cv{color:var(--n6);font-size:12px;margin-left:12px;}
+.qa-b{display:none;padding:0 13px 13px 37px;font-size:12.5px;line-height:1.75;color:var(--n7);}
+.qa-i.open .qa-b{display:block;}
+.qa-b p{margin:0 0 7px;}
+.qa-b p:last-child{margin:0;}
+.d-more{margin-top:12px;display:flex;align-items:center;gap:10px;padding:11px 13px;border:1px dashed var(--line);border-radius:7px;background:#FCFDFE;font-size:12.5px;color:var(--n5);}
+.c-note{display:flex;gap:8px;padding:10px 12px;border-left:2px solid var(--blue-line);background:#F7FAFF;border-radius:0 5px 5px 0;font-size:12.5px;line-height:1.7;color:var(--n7);}
+.c-note b{flex:0 0 auto;color:var(--n8);font-weight:600;}
+.d-days{margin-top:12px;border:1px solid var(--line);border-radius:8px;padding:11px 13px;}
+.d-days .h{font-size:12.5px;font-weight:600;color:var(--n8);margin-bottom:9px;}
+.d-days .h span{font-weight:400;color:var(--n6);font-size:11.5px;margin-left:6px;}
+.d-days .list{display:flex;gap:6px;}
+.d-days .dd{flex:1 1 0;text-align:center;padding:8px 4px;border-radius:5px;background:#FAFBFC;border:1px solid var(--line-2);}
+.d-days .dd span{display:block;font-size:11px;color:var(--n6);}
+.d-days .dd b{display:block;font-size:14px;font-weight:600;margin:2px 0 1px;color:var(--n7);font-variant-numeric:tabular-nums;}
+.d-days .dd i{display:block;font-size:10px;color:#A8AFBA;font-style:normal;letter-spacing:-.2px;}
+.d-days .dd.hi{background:#F2F8FF;border-color:#CFE4FF;}
+.d-days .dd.hi b{color:#0066CC;}
+.d-more b{color:var(--n7);font-weight:500;}
+.d-more .btn{margin-left:auto;}
+
+/* ---------- 点评 ---------- */
+.verdict{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px;}
+.vcard{background:#fff;border:1px solid var(--line);border-radius:8px;padding:12px 14px;}
+.vcard h4{margin:0 0 7px;font-size:12.5px;font-weight:600;color:var(--n7);}
+.vcard ul{margin:0;padding-left:16px;font-size:12.5px;line-height:1.85;color:var(--n5);}
+.vcard.bad h4{color:var(--amber);}
+.vcard.good h4{color:var(--green);}
+
+/* ---------- 图表 ---------- */
+.chart{width:100%;height:auto;display:block;}
+.legend{display:flex;gap:14px;font-size:11.5px;color:var(--n6);margin-top:2px;}
+.legend i{display:inline-block;width:10px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle;}
+
+@media (max-width:880px){
+  .a-sum{flex-wrap:wrap;}
+  .a-sum-main{flex:1 1 100%;border-right:0;border-bottom:1px solid var(--line);}
+  .b-hero{flex-direction:column;}
+  .b-hero-l{flex:0 0 auto;border-right:0;border-bottom:1px solid var(--line);}
+  .verdict{grid-template-columns:1fr;}
+  .c-nav{flex:0 0 108px;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="head">
+    <h1>完整结果与建议抽屉 · 信息优化方案</h1>
+    <p>同一个任务（AR 综合良率 · 未来两周 / 14 天 / demo-1）在四种结构下的呈现，四版都用真实数值。</p>
+  </div>
+
+  <div class="diag">
+    <b>当前抽屉的六个问题</b>
+    <ol>
+      <li><b>标题说两遍</b>：抽屉头「AR 综合良率 · 未来两周」下面，正文又起一个 h2「AR 综合良率 · 全部产品」。</li>
+      <li><b>导出入口两处</b>：头部「导出数据」下拉 + 底部「导出 CSV / 导出完整 JSON」。</li>
+      <li><b>元信息散成四行</b>：任务号 / 版本 / 步骤、历史与预测范围、数据口径快照、数据划分，各占一行小字，读起来像备案文件。</li>
+      <li><b>指标卡有一个是过程量</b>：预测均值 / MAE / RMSE / 有效日样本，「133 天」不参与业务判断，却占了一格的视觉权重。</li>
+      <li><b>解读区 200 多字挤在一屏</b>：① ② ③ 三段正文句式相近，「如何判断是否可用」又在复述上面的 MAE。</li>
+      <li><b>结尾免责说三次</b>：「解读依据当前数值…」「结果可追溯到样本…」＋ 图表上方 3 行「怎么看这张图」。</li>
+    </ol>
+  </div>
+
+  <div class="pick">
+    <div class="pick-l">
+      <span class="badge">建议</span>
+      <p>以 <b>方案 A</b> 打底：一屏内给结论、图和 5 行明细，标题与导出各留一处；若业务方明确要「先读判断再决定看哪里」，选 <b>方案 B</b>，摘要把三条要点写成人话。</p>
+      <p><b>C</b> 适合后续还要往抽屉里加内容（异常检测、版本对比）；<b>D</b> 适合完全不想读图、只想拿结论去开会的人。</p>
+    </div>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <button class="on" data-pane="pA"><b>A</b> 结论前置</button>
+    <button data-pane="pB"><b>B</b> 摘要卡 + 分段折叠</button>
+    <button data-pane="pC"><b>C</b> 左栏导航</button>
+    <button data-pane="pD"><b>D</b> 问答式</button>
+  </div>
+
+  <!-- ==================== A ==================== -->
+  <div class="pane on" id="pA">
+    <div class="pane-head">
+      <h2>方案 A · 结论前置 <span>做减法：一屏看完摘要和图，明细与解读收进折叠</span></h2>
+      <p>标题只出现一次；结论压成一条横带；图先给；明细默认 5 行；解读折叠成一行摘要。</p>
+    </div>
+
+    <div class="stage">
+      <div class="stage-bg">
+        <div class="ghost">
+          <div class="l"></div><div class="l s"></div>
+          <div class="num">96.00<small>%</small></div>
+          <div class="l s"></div>
+          <div class="row"><span>MAE 0.17</span><span>14 天</span></div>
+        </div>
+      </div>
+      <div class="mask"></div>
+      <div class="drawer">
+        <div class="d-head">
+          <div class="d-title">
+            <h2>AR 综合良率 · 未来两周</h2>
+            <div class="d-sub">demo-1 · 结果 v1 · 预测 14 天</div>
+          </div>
+          <div class="d-actions">
+            <button class="btn">导出</button>
+            <button class="xbtn">✕</button>
+          </div>
+        </div>
+
+        <div class="d-body">
+          <div class="a-sum">
+            <div class="a-sum-main">
+              <span class="k">未来 14 天预测均值</span>
+              <div class="v">96.00<i>%</i></div>
+            </div>
+            <div class="a-sum-item">
+              <span class="k">最低点</span>
+              <div class="v">95.51<small>%</small></div>
+              <span class="s">11-22</span>
+            </div>
+            <div class="a-sum-item">
+              <span class="k">测试 MAE</span>
+              <div class="v">0.17<small>百分点</small></div>
+              <span class="s">28 天回测</span>
+            </div>
+            <div class="a-sum-item">
+              <span class="k">波动区间</span>
+              <div class="v">±1.2<small>百分点</small></div>
+              <span class="s">90% 参考</span>
+            </div>
+            <div class="a-sum-tag"><span class="tag grey">未设关注线</span></div>
+          </div>
+
+          <div class="a-meta">
+            <span>历史 2026-07-01 ~ 11-10</span><span class="sep">·</span>
+            <span>133 天样本</span><span class="sep">·</span>
+            <span>岭回归 Ridge</span><span class="sep">·</span>
+            <button class="linkbtn">数据口径 AYM v1</button>
+          </div>
+
+          <div class="a-chart">
+            <div class="a-chart-top">
+              <h3>未来 14 天趋势</h3>
+              <i class="inf">i<span class="tip">蓝线为预测值，浅蓝带为按历史残差估计的 90% 参考区间。区间跨过关注线只代表不确定，不等于一定低于目标。</span></i>
+              <span class="legend" style="margin-left:auto"><span><i style="background:#0081FF"></i>预测</span><span><i style="background:#BBD9FA"></i>90% 参考区间</span></span>
+            </div>
+            <svg class="chart" id="cA" viewBox="0 0 1000 220"></svg>
+          </div>
+
+          <div class="a-tbl-head">
+            <h3>未来预测明细</h3>
+            <span class="r" id="aCount">14 条 · 单位：%</span>
+          </div>
+          <table class="dt" id="aTbl"></table>
+          <div style="text-align:center;margin-top:6px">
+            <button class="btn mini" id="aMore">展开全部 14 行</button>
+          </div>
+
+          <div class="fold" id="aFold">
+            <button class="fold-h">
+              <b>解读与建议</b>
+              <span class="sm">整体平稳、11-22 前后走低；误差 0.17 百分点，可直接参考。</span>
+              <span class="cv">展开</span>
+            </button>
+            <div class="fold-b">
+              <p><b>趋势</b>：前 7 天由 95.70% 缓升至 11-17 的 96.68%，随后回落，11-22 见底 95.51%，末日回升至 95.75%。</p>
+              <p><b>可用性</b>：测试集 28 天 MAE 0.17、RMSE 0.19 百分点；最大偏差 0.31 出现在 10-14，可对照当天记录确认是否有机台或产品切换。</p>
+              <p><b>下一步</b>：11-20 至 11-24 连续下行，建议与排产计划对照关注；如需更保守，可缩短至 7 天重新验证后使用。</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-foot">
+          <span class="sum">未设关注线，仅按参考区间观察</span>
+          <div class="acts">
+            <button class="btn">关闭</button>
+            <button class="btn primary">调整条件再次预测</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="verdict">
+      <div class="vcard good">
+        <h4>解决了什么</h4>
+        <ul>
+          <li>标题、导出、免责各只剩一处</li>
+          <li>首屏就能拿到「均值 / 最低点 / 误差」三个判断依据</li>
+          <li>总高从约 1500px 降到约 900px，明细默认 5 行</li>
+          <li>「怎么看这张图」从 3 行常驻文字变成 hover 气泡</li>
+        </ul>
+      </div>
+      <div class="vcard bad">
+        <h4>代价</h4>
+        <ul>
+          <li>解读要点默认折叠，需要用户主动点开</li>
+          <li>版本切换与「图表显示」开关被收进「导出」旁，需再想放在哪</li>
+          <li>结论带里放了 4 个数字，窄屏要换行</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== B ==================== -->
+  <div class="pane" id="pB">
+    <div class="pane-head">
+      <h2>方案 B · 摘要卡 + 分段折叠 <span>业务优先：先给结论和三条判断，细节按需展开</span></h2>
+      <p>大字结论 + 三条要点写成人话；下面四段（趋势 / 明细 / 验证 / 依据）各是一个可折叠段，默认只开趋势。</p>
+    </div>
+
+    <div class="stage">
+      <div class="stage-bg">
+        <div class="ghost">
+          <div class="l"></div><div class="l s"></div>
+          <div class="num">96.00<small>%</small></div>
+          <div class="l s"></div>
+        </div>
+      </div>
+      <div class="mask"></div>
+      <div class="drawer">
+        <div class="d-head">
+          <div class="d-title">
+            <h2>AR 综合良率 · 未来两周</h2>
+            <div class="d-sub">demo-1 · v1 · 14 天 · 全部产品</div>
+          </div>
+          <div class="d-actions">
+            <button class="btn">导出</button>
+            <button class="xbtn">✕</button>
+          </div>
+        </div>
+
+        <div class="d-body">
+          <div class="b-hero">
+            <div class="b-hero-l">
+              <span class="k">未来 14 天预测均值</span>
+              <div class="big">96.00<i>%</i></div>
+              <span class="tr">↑ 较历史均值高 0.05 百分点</span>
+            </div>
+            <div class="b-hero-r">
+              <div class="li"><b>趋势</b><span>前半段缓升到 11-17 的 96.68%，之后回落，11-22 见底 95.51%，末日回到 95.75%。</span></div>
+              <div class="li"><b>可用性</b><span>28 天回测 MAE 0.17 百分点，最大偏差 0.31（10-14），整体可用于排产参考。</span></div>
+              <div class="li"><b>下一步</b><span>11-20 起连续 5 天走低，建议结合排产计划关注这一段。</span></div>
+            </div>
+          </div>
+
+          <div class="b-chips">
+            <span>MAE 0.17 百分点</span><span>RMSE 0.19</span><span>90% 参考区间</span>
+            <span>133 天有效样本</span><span>岭回归 Ridge</span><span>未设关注线</span>
+          </div>
+
+          <div class="b-sec open" data-sec>
+            <div class="h"><span class="n">1</span>趋势图<span class="meta">未来 14 天 · 90% 参考区间</span><span class="cv">收起</span></div>
+            <div class="c">
+              <svg class="chart" id="cB" viewBox="0 0 1000 220"></svg>
+            </div>
+          </div>
+
+          <div class="b-sec" data-sec>
+            <div class="h"><span class="n">2</span>预测明细<span class="meta">14 条记录 · 含区间上下界</span><span class="cv">展开</span></div>
+            <div class="c">
+              <table class="dt" id="bTbl"></table>
+            </div>
+          </div>
+
+          <div class="b-sec" data-sec>
+            <div class="h"><span class="n">3</span>验证与模型<span class="meta">测试 28 天 · 岭回归（1-SE 简约选型）</span><span class="cv">展开</span></div>
+            <div class="c">
+              <table class="dt">
+                <thead><tr><th>候选模型</th><th class="num">验证 MAE</th><th class="num">测试 MAE</th><th>结论</th></tr></thead>
+                <tbody>
+                  <tr><td>岭回归 Ridge</td><td class="num">0.27</td><td class="num">0.17</td><td><span class="tag blue">已选用</span></td></tr>
+                  <tr><td>直方图梯度提升</td><td class="num">0.26</td><td class="num">0.31</td><td>误差相近</td></tr>
+                  <tr><td>随机森林</td><td class="num">0.30</td><td class="num">0.33</td><td>偏差较大</td></tr>
+                  <tr><td>历史同期基线</td><td class="num">0.42</td><td class="num">0.41</td><td>基线参照</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="b-sec" data-sec>
+            <div class="h"><span class="n">4</span>依据与口径<span class="meta">AYM 质量统计数据源 v1 · 已确认快照</span><span class="cv">展开</span></div>
+            <div class="c">
+              <table class="dt">
+                <tbody>
+                  <tr><td style="width:96px;color:#909399">数据源</td><td>AYM 质量统计数据源 · v1（2026-11-11 发布）</td></tr>
+                  <tr><td style="color:#909399">表与字段</td><td class="mono">ADS_AR_YIELD_DI · TIME_KEY / PRODUCT_ID / QTY / GRADE</td></tr>
+                  <tr><td style="color:#909399">口径</td><td>合格等级 A/T/Q 数量 ÷（合格 + F/S 不良数量）× 100%，按日聚合</td></tr>
+                  <tr><td style="color:#909399">划分</td><td>训练 63 天 / 验证 14 天 / 测试 28 天，时间序列切分</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-foot">
+          <span class="sum">结果可追溯到样本、字段与测试区间</span>
+          <div class="acts">
+            <button class="btn">导出 CSV</button>
+            <button class="btn primary">调整条件再次预测</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="verdict">
+      <div class="vcard good">
+        <h4>解决了什么</h4>
+        <ul>
+          <li>结论用大白话写成三条，不需要读懂「①②③」</li>
+          <li>长明细、模型表、口径表全部按需展开，首屏只剩摘要 + 图</li>
+          <li>过程指标（样本天数、RMSE）降级成 chips，不再抢视觉</li>
+          <li>「依据与口径」独立成段，审计时点开即可，不干扰决策</li>
+        </ul>
+      </div>
+      <div class="vcard bad">
+        <h4>代价</h4>
+        <ul>
+          <li>摘要卡占 150px，首屏图表被推低</li>
+          <li>三条要点需要人工维护文案，不能靠模板拼</li>
+          <li>折叠段多，用户要知道自己去哪找明细</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== C ==================== -->
+  <div class="pane" id="pC">
+    <div class="pane-head">
+      <h2>方案 C · 左栏导航 <span>一屏一站：内容多也不无限滚动</span></h2>
+      <p>抽屉内左侧加 132px 锚点导航，右侧只渲染当前这一段。适合后续还会加内容的场景。</p>
+    </div>
+
+    <div class="stage">
+      <div class="stage-bg">
+        <div class="ghost">
+          <div class="l"></div><div class="l s"></div>
+          <div class="num">96.00<small>%</small></div>
+        </div>
+      </div>
+      <div class="mask"></div>
+      <div class="drawer">
+        <div class="d-head">
+          <div class="d-title">
+            <h2>AR 综合良率 · 未来两周</h2>
+            <div class="d-sub">demo-1 · v1 · 14 天</div>
+          </div>
+          <div class="d-actions">
+            <button class="btn">导出</button>
+            <button class="xbtn">✕</button>
+          </div>
+        </div>
+
+        <div class="c-wrap">
+          <nav class="c-nav" id="cNav">
+            <div class="grp">结果</div>
+            <button class="on" data-t="0">概览</button>
+            <button data-t="1">趋势图</button>
+            <button data-t="2">预测明细</button>
+            <div class="grp">依据</div>
+            <button data-t="3">验证与模型</button>
+            <button data-t="4">口径与字段</button>
+          </nav>
+
+          <div class="c-main">
+            <div class="c-page" data-p="0">
+              <div class="c-lead">
+                未来 14 天均值 <b>96.00%</b>，整体平稳略降；最低 <b>95.51%</b>（11-22）。测试误差 <b>0.17 百分点</b>，可直接用于排产参考。
+              </div>
+              <div class="c-kv">
+                <div class="b"><div class="k">最低点</div><div class="v">95.51<small>%</small></div><span style="font-size:11.5px;color:#909399">11-22</span></div>
+                <div class="b"><div class="k">测试 MAE</div><div class="v">0.17<small>百分点</small></div><span style="font-size:11.5px;color:#909399">28 天回测</span></div>
+                <div class="b"><div class="k">参考区间</div><div class="v">±1.2<small>百分点</small></div><span style="font-size:11.5px;color:#909399">90% 置信</span></div>
+              </div>
+              <div class="c-sec">
+                <div class="sec-h"><h3>趋势</h3><span class="r">未来 14 天</span></div>
+                <svg class="chart" id="cC" viewBox="0 0 1000 220"></svg>
+              </div>
+              <div class="c-note"><b>建议</b>11-20 至 11-24 连续走低，建议与排产计划对照关注；如需更保守，可缩短至 7 天重新验证。</div>
+            </div>
+
+            <div class="c-page" data-p="1" hidden>
+              <div class="sec-h"><h3>未来 14 天趋势</h3><span class="r">90% 参考区间 · 单位 %</span></div>
+              <svg class="chart" id="cC2" viewBox="0 0 1000 300"></svg>
+              <p style="font-size:12.5px;color:#737985;margin:10px 0 0;line-height:1.7">
+                区间由历史残差估计，宽度随预测步长增长；区间跨过目标线只代表不确定，不等于一定低于目标。
+              </p>
+            </div>
+
+            <div class="c-page" data-p="2" hidden>
+              <div class="sec-h"><h3>未来预测明细</h3><span class="r">14 条 · 单位 %</span></div>
+              <table class="dt" id="cTbl"></table>
+            </div>
+
+            <div class="c-page" data-p="3" hidden>
+              <div class="sec-h"><h3>验证与模型</h3><span class="r">测试 28 天</span></div>
+              <table class="dt">
+                <thead><tr><th>候选模型</th><th class="num">验证 MAE</th><th class="num">测试 MAE</th><th>结论</th></tr></thead>
+                <tbody>
+                  <tr><td>岭回归 Ridge</td><td class="num">0.27</td><td class="num">0.17</td><td><span class="tag blue">已选用</span></td></tr>
+                  <tr><td>直方图梯度提升</td><td class="num">0.26</td><td class="num">0.31</td><td>误差相近</td></tr>
+                  <tr><td>随机森林</td><td class="num">0.30</td><td class="num">0.33</td><td>偏差较大</td></tr>
+                  <tr><td>历史同期基线</td><td class="num">0.42</td><td class="num">0.41</td><td>基线参照</td></tr>
+                </tbody>
+              </table>
+              <p style="font-size:12.5px;color:#737985;margin:10px 0 0;line-height:1.7">按验证集 1-SE 简约规则在误差相近的候选中优先选较简单模型；测试集仅用于最终核验，不参与选型。</p>
+            </div>
+
+            <div class="c-page" data-p="4" hidden>
+              <div class="sec-h"><h3>口径与字段</h3><span class="r">AYM v1 · 已确认快照</span></div>
+              <table class="dt">
+                <tbody>
+                  <tr><td style="width:96px;color:#909399">数据源</td><td>AYM 质量统计数据源 · v1（2026-11-11 发布）</td></tr>
+                  <tr><td style="color:#909399">表</td><td class="mono">ADS_AR_YIELD_DI</td></tr>
+                  <tr><td style="color:#909399">字段</td><td class="mono">TIME_KEY / PRODUCT_ID / QTY / GRADE</td></tr>
+                  <tr><td style="color:#909399">口径</td><td>合格等级 A/T/Q 数量 ÷（合格 + F/S 不良数量）× 100%</td></tr>
+                  <tr><td style="color:#909399">范围</td><td>2026-07-01 ~ 11-10，133 天有效样本</td></tr>
+                  <tr><td style="color:#909399">划分</td><td>训练 63 / 验证 14 / 测试 28 天</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-foot">
+          <span class="sum">demo-1 · 结果 v1 · 2026-11-19 生成</span>
+          <div class="acts">
+            <button class="btn primary">调整条件再次预测</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="verdict">
+      <div class="vcard good">
+        <h4>解决了什么</h4>
+        <ul>
+          <li>彻底不靠滚动，一屏一段，明细 14 行也不用挤</li>
+          <li>口径 / 字段这类「审计时才看」的内容有固定入口</li>
+          <li>后续加内容（如异常检测、对比版本）不用重排</li>
+        </ul>
+      </div>
+      <div class="vcard bad">
+        <h4>代价</h4>
+        <ul>
+          <li>左栏占 132px，图表和表格变窄</li>
+          <li>多一层导航，只看一眼结果的用户会多一次点击</li>
+          <li>与核对抽屉的纯滚动结构不一致，要统一</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== D ==================== -->
+  <div class="pane" id="pD">
+    <div class="pane-head">
+      <h2>方案 D · 问答式 <span>把「解读」变成用户会问的三个问题</span></h2>
+      <p>顶部一段 AI 摘要（3 行内说清结论），下面三个可展开问答，完整图表与明细收在底部入口。</p>
+    </div>
+
+    <div class="stage">
+      <div class="stage-bg">
+        <div class="ghost">
+          <div class="l"></div><div class="l s"></div>
+          <div class="num">96.00<small>%</small></div>
+        </div>
+      </div>
+      <div class="mask"></div>
+      <div class="drawer">
+        <div class="d-head">
+          <div class="d-title">
+            <h2>AR 综合良率 · 未来两周</h2>
+            <div class="d-sub">demo-1 · v1 · 14 天</div>
+          </div>
+          <div class="d-actions">
+            <button class="btn">导出</button>
+            <button class="xbtn">✕</button>
+          </div>
+        </div>
+
+        <div class="d-body">
+          <div class="d-hero">
+            <div class="who">
+              <span class="dot">AI</span><b>结果摘要</b>
+              <span class="tag blue">基于本次计算</span>
+            </div>
+            <p>
+              未来 14 天 AR 综合良率均值 <em>96.00%</em>，整体平稳、末段略降，最低 <em>95.51%</em> 出现在 11-22。
+              测试 28 天平均偏差 <em>0.17 百分点</em>，结果可直接用于排产参考；未设关注线，暂无法判断是否触发风险。
+            </p>
+          </div>
+
+          <div class="qa" id="qaList">
+            <div class="qa-i open">
+              <button class="qa-h"><span class="q">Q</span>这份预测准不准？<span class="pill">可用于参考</span><span class="cv">收起</span></button>
+              <div class="qa-b">
+                <p>用最近 28 天做回测：平均绝对偏差 0.17 百分点，均方根 0.19。最大偏差 0.31 出现在 10-14，可对照当天生产记录确认是否有机台切换或数据缺失。</p>
+                <p>模型在四个候选中按「误差相近优先选简单」的规则选中岭回归。业务若把可接受误差定在 0.3 百分点以内，本次结果达标。</p>
+              </div>
+            </div>
+            <div class="qa-i">
+              <button class="qa-h"><span class="q">Q</span>哪天需要重点关注？<span class="pill amber">11-20 ~ 11-22</span><span class="cv">展开</span></button>
+              <div class="qa-b">
+                <p>11-17 触顶 96.68% 后开始回落，11-20 至 11-22 连续三天走低，11-22 见底 95.51%，随后回到 95.75%。</p>
+                <p>这三天是排产与设备点检的优先窗口。</p>
+              </div>
+            </div>
+            <div class="qa-i">
+              <button class="qa-h"><span class="q">Q</span>要不要调整预测条件？<span class="pill amber">建议设关注线</span><span class="cv">展开</span></button>
+              <div class="qa-b">
+                <p>当前未设关注线，结果只做了趋势描述。若给出业务下限（例如 95.5%），可以直接算出低于下限的天数与参考区间跨线天数。</p>
+                <p>如希望更保守，可缩短至 7 天重新验证；短线预测的区间宽度会明显收窄。</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="d-days">
+            <div class="h">需要关注的 5 天 <span>预测值与 90% 参考区间</span></div>
+            <div class="list">
+              <div class="dd"><span>11-20</span><b>95.97</b><i>94.79 ~ 97.15</i></div>
+              <div class="dd"><span>11-21</span><b>95.67</b><i>94.46 ~ 96.88</i></div>
+              <div class="dd hi"><span>11-22</span><b>95.51</b><i>94.26 ~ 96.76</i></div>
+              <div class="dd"><span>11-23</span><b>95.54</b><i>94.26 ~ 96.82</i></div>
+              <div class="dd"><span>11-24</span><b>95.75</b><i>94.43 ~ 97.07</i></div>
+            </div>
+          </div>
+
+          <div class="d-more">
+            <b>完整图表与 14 天明细</b><span>含区间上下界、验证对比与模型表</span>
+            <button class="btn mini">查看全部数据</button>
+          </div>
+        </div>
+
+        <div class="d-foot">
+          <span class="sum">解读依据当前数值，不代表已确定生产波动的原因</span>
+          <div class="acts">
+            <button class="btn primary">调整条件再次预测</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="verdict">
+      <div class="vcard good">
+        <h4>解决了什么</h4>
+        <ul>
+          <li>不再有「①②③」这种要按顺序读的长段落</li>
+          <li>每个回答都能直接落地（准不准 / 哪几天 / 要不要调）</li>
+          <li>免责声明只留一处，语气收敛</li>
+        </ul>
+      </div>
+      <div class="vcard bad">
+        <h4>代价</h4>
+        <ul>
+          <li>首屏没有图，靠点击才能看到趋势</li>
+          <li>问答需要后端能生成对应文案，纯模板拼不出来</li>
+          <li>「查看全部数据」入口容易被忽略</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+var ROWS=[
+ {d:'2026-11-11',p:95.70,l:94.92,u:96.48},
+ {d:'2026-11-12',p:95.63,l:94.79,u:96.47},
+ {d:'2026-11-13',p:95.75,l:94.86,u:96.64},
+ {d:'2026-11-14',p:96.02,l:95.09,u:96.95},
+ {d:'2026-11-15',p:96.34,l:95.36,u:97.32},
+ {d:'2026-11-16',p:96.59,l:95.57,u:97.61},
+ {d:'2026-11-17',p:96.68,l:95.62,u:97.74},
+ {d:'2026-11-18',p:96.58,l:95.48,u:97.68},
+ {d:'2026-11-19',p:96.31,l:95.17,u:97.45},
+ {d:'2026-11-20',p:95.97,l:94.79,u:97.15},
+ {d:'2026-11-21',p:95.67,l:94.46,u:96.88},
+ {d:'2026-11-22',p:95.51,l:94.26,u:96.76},
+ {d:'2026-11-23',p:95.54,l:94.26,u:96.82},
+ {d:'2026-11-24',p:95.75,l:94.43,u:97.07}
+];
+
+function mmdd(d){return d.slice(5);}
+
+/* 画趋势图：viewBox 640 x H */
+function drawChart(el,H,opt){
+  if(!el){return;}
+  opt=opt||{};
+  var W=1000,left=52,right=18,top=opt.top||14,bottom=H-(opt.bottom||26);
+  var ymin=94.0,ymax=98.0;
+  var n=ROWS.length;
+  function X(i){return left+i*(W-left-right)/(n-1);}
+  function Y(v){return bottom-(v-ymin)/(ymax-ymin)*(bottom-top);}
+  var s='';
+  // 网格
+  var ticks=[94,95,96,97,98];
+  for(var i=0;i<ticks.length;i++){
+    var y=Y(ticks[i]);
+    s+='<line x1="'+left+'" y1="'+y+'" x2="'+(W-right)+'" y2="'+y+'" stroke="'+(ticks[i]===96?'#E1E6EE':'#F0F2F6')+'"/>';
+    s+='<text x="'+(left-10)+'" y="'+(y+4)+'" text-anchor="end" font-size="11" fill="#9AA3AF">'+ticks[i].toFixed(0)+'</text>';
+  }
+  // 区间带
+  var up='',dn='';
+  for(i=0;i<n;i++){up+=X(i)+','+Y(ROWS[i].u)+' ';}
+  for(i=n-1;i>=0;i--){dn+=X(i)+','+Y(ROWS[i].l)+' ';}
+  s+='<polygon points="'+(up+dn)+'" fill="#0081FF" fill-opacity=".10"/>';
+  // 折线
+  var pts='';
+  for(i=0;i<n;i++){pts+=X(i)+','+Y(ROWS[i].p)+' ';}
+  s+='<polyline points="'+pts+'" fill="none" stroke="#0081FF" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+  // 点
+  for(i=0;i<n;i++){
+    var isMin=ROWS[i].p===95.51;
+    s+='<circle cx="'+X(i)+'" cy="'+Y(ROWS[i].p)+'" r="'+(isMin?3.4:2.4)+'" fill="#fff" stroke="#0081FF" stroke-width="'+(isMin?2:1.6)+'"/>';
+  }
+  // 最低点标注
+  for(i=0;i<n;i++){
+    if(ROWS[i].p===95.51){
+      var mx=X(i),my=Y(ROWS[i].p);
+      s+='<line x1="'+mx+'" y1="'+(my+5)+'" x2="'+mx+'" y2="'+(bottom)+'" stroke="#BBD9FA" stroke-dasharray="3 3"/>';
+      s+='<path d="M'+mx+' '+my+' L'+(mx+14)+' '+(my-18)+'" stroke="#9CC6F5" stroke-width="1" fill="none"/>';
+      s+='<rect x="'+(mx+14)+'" y="'+(my-34)+'" width="78" height="20" rx="3" fill="#E9F3FF" stroke="#CFE4FF"/>';
+      s+='<text x="'+(mx+20)+'" y="'+(my-20)+'" font-size="11" fill="#0066CC">95.51 · 11-22</text>';
+    }
+  }
+  // x 轴
+  var idx=opt.xTicks||[0,5,9,13];
+  for(i=0;i<idx.length;i++){
+    var k=idx[i];
+    s+='<text x="'+X(k)+'" y="'+(bottom+18)+'" text-anchor="middle" font-size="11" fill="#9AA3AF">'+mmdd(ROWS[k].d)+'</text>';
+  }
+  el.setAttribute('viewBox','0 0 '+W+' '+H);
+  el.innerHTML=s;
+}
+
+/* 明细表 */
+function fillTable(el,rows){
+  if(!el){return;}
+  var h='<thead><tr><th>日期</th><th class="num">预测值</th><th class="num">区间下界</th><th class="num">区间上界</th></tr></thead><tbody>';
+  for(var i=0;i<rows.length;i++){
+    var r=rows[i];
+    h+='<tr><td>'+r.d+'</td><td class="num">'+r.p.toFixed(2)+'</td><td class="num">'+r.l.toFixed(2)+'</td><td class="num">'+r.u.toFixed(2)+'</td></tr>';
+  }
+  el.innerHTML=h+'</tbody>';
+}
+
+/* tabs */
+document.getElementById('tabs').addEventListener('click',function(e){
+  var b=e.target.closest('button[data-pane]');
+  if(!b){return;}
+  var bs=this.querySelectorAll('button');
+  for(var i=0;i<bs.length;i++){bs[i].classList.remove('on');}
+  b.classList.add('on');
+  var ps=document.querySelectorAll('.pane');
+  for(i=0;i<ps.length;i++){ps[i].classList.remove('on');}
+  document.getElementById(b.getAttribute('data-pane')).classList.add('on');
+  drawAll();
+});
+
+/* 折叠块 */
+document.addEventListener('click',function(e){
+  var fh=e.target.closest('.fold-h');
+  if(fh){var f=fh.parentNode;f.classList.toggle('open');fh.querySelector('.cv').textContent=f.classList.contains('open')?'收起':'展开';return;}
+  var sh=e.target.closest('.b-sec > .h');
+  if(sh){var sec=sh.parentNode;sec.classList.toggle('open');sh.querySelector('.cv').textContent=sec.classList.contains('open')?'收起':'展开';return;}
+  var qh=e.target.closest('.qa-h');
+  if(qh){var item=qh.parentNode;item.classList.toggle('open');qh.querySelector('.cv').textContent=item.classList.contains('open')?'收起':'展开';return;}
+});
+
+/* 方案 A 明细展开 */
+var aExpanded=false;
+document.getElementById('aMore').addEventListener('click',function(){
+  aExpanded=!aExpanded;
+  fillTable(document.getElementById('aTbl'),aExpanded?ROWS:ROWS.slice(0,5));
+  this.textContent=aExpanded?'收起，只看前 5 行':'展开全部 14 行';
+});
+
+/* 方案 C 导航 */
+document.getElementById('cNav').addEventListener('click',function(e){
+  var b=e.target.closest('button[data-t]');
+  if(!b){return;}
+  var bs=this.querySelectorAll('button[data-t]');
+  for(var i=0;i<bs.length;i++){bs[i].classList.remove('on');}
+  b.classList.add('on');
+  var t=b.getAttribute('data-t');
+  var ps=document.querySelectorAll('.c-page');
+  for(i=0;i<ps.length;i++){ps[i].hidden=ps[i].getAttribute('data-p')!==t;}
+  drawAll();
+});
+
+function drawAll(){
+  drawChart(document.getElementById('cA'),220,{});
+  drawChart(document.getElementById('cB'),210,{xTicks:[0,4,9,13]});
+  drawChart(document.getElementById('cC'),220,{bottom:24});
+  drawChart(document.getElementById('cC2'),300,{bottom:28,top:16});
+}
+
+fillTable(document.getElementById('aTbl'),ROWS.slice(0,5));
+fillTable(document.getElementById('bTbl'),ROWS);
+fillTable(document.getElementById('cTbl'),ROWS);
+drawAll();
+</script>
+</body>
+</html>

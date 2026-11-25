@@ -1,0 +1,9 @@
+# 会话与工具数据
+.workbuddy/
+
+# 构建产物与临时截图
+*.zip
+tools/shots/
+
+# 系统文件
+.DS_Store

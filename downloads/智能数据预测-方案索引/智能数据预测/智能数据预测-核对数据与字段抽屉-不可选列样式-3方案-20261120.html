@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="jLHytL8iHpP0uxmiWXEi9T">
+<head data-page-node-id="4HMPz3rcKyuJOzFmj7OgPJ">
+<meta charset="UTF-8" data-page-node-id="Ktg5IAglCtgPgzlku2iFKw">
+<meta name="viewport" content="width=device-width, initial-scale=1" data-page-node-id="O3eUoXETdZ0o9xtHYYy3P1">
+<title>核对数据与字段 · 分组表头与分区展开</title>
+<style>
+:root{
+  --blue:#0081FF; --blue-1:#E6F2FF; --blue-2:#EAF3FF; --blue-line:#B9D8FF; --blue-h:#0073E6;
+  --grn:#00C25B; --grn-bg:#E6FFF2; --grn-bg2:#F3FDF8; --grn-line:#46DB8C; --grn-t:#007537;
+  --t1:#303133; --t2:#606266; --t3:#909399; --line:#E4E7ED; --line-2:#EBEEF5; --bg:#EDF0F5;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;}
+body{background:var(--bg);font:14px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;color:var(--t1);-webkit-font-smoothing:antialiased;}
+.wrap{max-width:1000px;margin:0 auto;padding:28px 24px 72px;}
+
+.head h1{margin:0 0 6px;font-size:20px;font-weight:600;letter-spacing:.2px;}
+.head p{margin:0;color:#737985;font-size:13px;line-height:1.8;}
+
+/* ---------- 抽屉外壳 ---------- */
+.stage{display:flex;justify-content:center;overflow-x:auto;margin-top:18px;}
+.drawer{width:920px;flex:0 0 920px;background:#fff;border:1px solid var(--line);border-radius:8px;overflow:hidden;box-shadow:0 10px 28px rgba(31,38,48,.07);}
+.dw-head{display:flex;align-items:flex-start;gap:16px;padding:14px 20px 13px;border-bottom:1px solid var(--line-2);}
+.dw-title{min-width:0;}
+.dw-title h2{display:flex;align-items:center;gap:8px;margin:0;font-size:16px;font-weight:600;}
+.dw-step{display:inline-flex;align-items:center;height:18px;padding:0 6px;border-radius:3px;background:var(--bg);color:var(--t2);font-size:11px;font-weight:400;}
+.dw-title p{margin:5px 0 0;font-size:12px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dw-top{margin-left:auto;display:flex;align-items:center;gap:14px;}
+.dw-close{width:28px;height:28px;border:0;background:none;color:var(--t3);font-size:18px;line-height:1;cursor:pointer;border-radius:4px;}
+.dw-close:hover{background:#F5F7FA;color:var(--t1);}
+.link-btn{border:0;background:none;padding:0;font:12px/1.4 inherit;font-family:inherit;color:var(--blue);cursor:pointer;}
+.link-btn:hover{color:var(--blue-h);}
+.dw-body{padding:16px 20px;}
+
+/* 表格操作提示：一行灰字，不做色块 */
+/* 操作说明：信息图标 + hover 浮层，跟在「选特征 / 定目标」右侧 */
+.hint-info{position:relative;display:inline-flex;align-items:center;align-self:center;margin-left:2px;cursor:help;outline:none;}
+.hint-info>i{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border:1px solid #C0C4CC;border-radius:50%;font-size:9px;font-style:normal;line-height:1;color:var(--t3);}
+.hint-info:hover>i,.hint-info:focus-visible>i{border-color:#A9B4C4;color:var(--t2);}
+.hint-tip{position:absolute;top:calc(100% + 8px);left:-7px;z-index:100;width:272px;padding:9px 12px;border-radius:4px;background:var(--t1);color:#fff;font-size:12px;line-height:1.8;font-weight:400;box-shadow:0 4px 12px rgba(0,0,0,.14);opacity:0;visibility:hidden;transform:translateY(-2px);transition:opacity .15s,transform .15s,visibility .15s;pointer-events:none;white-space:normal;}
+.hint-tip:before{content:"";position:absolute;top:-4px;left:10px;width:8px;height:8px;background:var(--t1);transform:rotate(45deg);}
+.hint-info:hover .hint-tip,.hint-info:focus-visible .hint-tip{opacity:1;visibility:visible;transform:translateY(0);}
+
+/* 下拉控件 */
+select{appearance:none;-webkit-appearance:none;height:28px;padding:0 26px 0 9px;border:1px solid var(--line);border-radius:4px;background:#fff;color:var(--t1);font:12px/1 inherit;font-family:inherit;cursor:pointer;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath d='M2.5 4L5 6.5 7.5 4' fill='none' stroke='%23909399' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 8px center;}
+select:hover{border-color:#A9B4C4;}
+select:focus{outline:none;border-color:var(--blue);}
+
+
+.bar{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+.mode{display:inline-flex;flex:0 0 auto;gap:8px;}
+.mode button{height:28px;padding:0 14px;border:1px solid var(--line);border-radius:4px;background:#fff;color:var(--t2);font:12px/1 inherit;font-family:inherit;cursor:pointer;}
+.mode button:hover{border-color:#A9B4C4;color:var(--t1);}
+.legend{margin-left:auto;display:flex;align-items:center;gap:12px;font-size:12px;color:var(--t3);white-space:nowrap;}
+.legend i{width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:4px;vertical-align:-1px;}
+.lg-f{background:var(--blue-2);border:1px solid var(--blue-line);}
+.lg-t{background:var(--grn-bg);border:1px solid var(--grn-line);}
+.lg-n{background:#fff;border:1px solid var(--line);}
+.lg-l{background:#C9CFD9;border:1px solid #AEB6C2;}
+
+/* ---------- 三区：索引固定，特征 / 目标共用一条分界线 ---------- */
+.zones{
+  display:flex;align-items:stretch;height:436px;
+  border:1px solid var(--line);border-radius:4px;overflow:hidden;background:#fff;
+  --tw:176px;
+}
+.zones[data-focus="feat"]{--tw:112px;}
+.zones[data-focus="target"]{--tw:456px;}
+
+.zone{min-width:0;overflow:auto;position:relative;overscroll-behavior:contain;}
+.zone::-webkit-scrollbar{width:9px;height:9px;}
+.zone::-webkit-scrollbar-thumb{background:#D3D8E0;border-radius:5px;border:2px solid #fff;}
+.zone::-webkit-scrollbar-thumb:hover{background:#BCC3CF;}
+.zone::-webkit-scrollbar-track{background:transparent;}
+
+.z-lock{flex:0 0 303px;background:#FAFBFC;overflow-x:hidden;}
+.z-feat{flex:1 1 auto;background:#fff;border-left:1px solid var(--line);border-right:1px solid var(--line);container-type:inline-size;}
+.z-tgt{flex:0 0 auto;width:var(--tw);background:var(--grn-bg2);overflow-x:auto;container-type:inline-size;transition:width .24s cubic-bezier(.4,0,.2,1);}
+
+/* ---------- 表格基座 ---------- */
+.ptable{border-collapse:separate;border-spacing:0;table-layout:fixed;width:auto;font-size:12px;}
+.z-lock .ptable{width:294px;}
+.ptable th,.ptable td{height:30px;padding:7px 10px;border-right:1px solid var(--line);border-bottom:1px solid var(--line-2);text-align:left;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ptable thead{position:sticky;top:0;z-index:3;}
+.ptable thead th{background:#FAFBFC;vertical-align:top;cursor:pointer;user-select:none;}
+.ptable thead th:hover{background:#F4F7FA;}
+.ptable th.row-ix{width:44px;padding:7px 4px;text-align:center;color:var(--t3);cursor:default;background:#FAFBFC;}
+.ptable td.row-ix{width:44px;padding:7px 4px;text-align:center;color:var(--t3);background:#FAFBFC;}
+.ptable tbody tr:last-child td{border-bottom:0;}
+.ptable th:last-child,.ptable td:last-child{border-right:0;}
+.ptable tbody tr.hl td{background:#EFF3F8;}
+
+.th-role{display:flex;align-items:center;gap:5px;font-size:11px;line-height:1.6;color:var(--t3);}
+.th-name{display:block;font:600 12px/1.85 Consolas,Monaco,monospace;color:var(--t1);overflow:hidden;text-overflow:ellipsis;}
+.th-cn{display:block;font-size:11px;line-height:1.6;color:var(--t3);}
+.rb{flex:0 0 auto;width:11px;height:11px;border:1px solid #C0C4CC;border-radius:2px;background:#fff;position:relative;}
+.rb.on{background:var(--blue);border-color:var(--blue);}
+.rb.on:after{content:'';position:absolute;left:2.5px;top:1px;width:3px;height:5.5px;border:1.5px solid #fff;border-top:0;border-left:0;transform:rotate(45deg);}
+.rb.radio{border-radius:50%;border:1px solid #C0C4CC;}
+.rb.radio.on{background:#fff;border:3.5px solid var(--grn);}
+.rb.radio.on:after{display:none;}
+.rb.lock{background:#AEB6C2;border-color:#AEB6C2;}
+.rb.lock:after{content:'';position:absolute;left:2px;right:2px;top:4px;height:1.5px;background:#fff;}
+
+.ptable thead th.role-feature{background:#F1F8FF;}
+.ptable thead th.role-feature:hover{background:#E9F4FF;}
+th.role-feature .th-role{color:var(--blue);}
+.ptable thead th.role-target{background:var(--grn-bg);}
+.ptable thead th.role-target:hover{background:#DAFBEB;}
+th.role-target .th-role{color:var(--grn-t);}
+td.role-feature{background:#F1F8FF;}
+td.role-target{background:var(--grn-bg);color:var(--t1);font-weight:600;}
+.ptable th.role-target,.ptable td.role-target{text-align:center;}
+.ptable th.role-target .th-role{justify-content:center;}
+.ptable th.role-target .th-name,.ptable th.role-target .th-cn{text-align:center;}
+
+.ptable thead th.role-cand{background:#fff;}
+.ptable thead th.role-cand:hover{background:var(--grn-bg2);}
+th.role-cand .th-role{color:var(--t3);}
+th.role-cand .th-name{color:var(--t1);font-weight:600;}
+td.role-cand{background:#fff;color:var(--t2);}
+.ptable th.role-cand,.ptable td.role-cand{text-align:center;}
+.ptable th.role-cand .th-role{justify-content:center;}
+.ptable th.role-cand .th-name,.ptable th.role-cand .th-cn{text-align:center;}
+
+.ptable thead th.is-lock{background:#FBFBFC;cursor:not-allowed;}
+.ptable thead th.is-lock:hover{background:#F4F5F7;}
+th.is-lock .th-name{color:#303133;}
+th.is-lock .th-role{color:#6B7280;}
+th.is-lock .th-cn{color:#7C8492;}
+td.is-lock{background:#F4F5F7;color:#303133;}
+
+/* 分区带 */
+.grp-row th{height:29px;padding:0 10px;font-size:11px;font-weight:600;line-height:28px;cursor:default;vertical-align:middle;overflow:visible;}
+.grp-row th.row-ix{vertical-align:middle;font-size:11px;color:var(--t3);font-weight:400;border-bottom:1px solid #C9CFD9;background:#FAFBFC;}
+.grp-row th.grp-lock{background:#E4E7ED;color:#2B313C;border-bottom:1px solid #C9CFD9;}
+.grp-row th.grp-lock:hover{background:#E4E7ED;}
+.grp-row th.grp-feat{background:#E6F2FF;color:#0073E6;border-bottom:1px solid #C9CFD9;}
+.grp-row th.grp-feat:hover{background:#E6F2FF;}
+.grp-row th.grp-tgt{background:var(--grn-bg);color:var(--grn-t);border-bottom:1px solid #C9CFD9;}
+.grp-row th.grp-tgt:hover{background:var(--grn-bg);}
+
+/* 批量操作 */
+.bulk{display:inline-flex;align-items:center;gap:2px;font-size:11px;line-height:1;color:#5E6674;white-space:nowrap;}
+.bulk b{font-weight:600;color:#0D2A45;margin-right:6px;font-variant-numeric:tabular-nums;letter-spacing:.2px;}
+.bulk button{height:20px;padding:0 6px;border:0;border-radius:3px;background:none;color:#33506B;font:11px/1 inherit;font-family:inherit;cursor:pointer;}
+.bulk button:hover{background:rgba(255,255,255,.8);color:#0D2A45;}
+.band-in{display:flex;align-items:center;height:28px;}
+.band-in .bulk{margin-left:auto;position:sticky;right:12px;}
+.band-sticky{position:sticky;left:12px;display:inline-flex;align-items:center;gap:7px;height:28px;}
+.band-sticky .band-n{font-weight:400;color:var(--grn-t);opacity:.78;font-variant-numeric:tabular-nums;}
+@container (max-width: 180px){
+  .band-n{display:none;}
+}
+@container (max-width: 250px){
+  .band-in .bulk{display:none;}
+}
+
+/* ---------- 已选字段（目标 / 特征 两行卡） ---------- */
+.sum{margin-top:12px;padding:9px 12px;border:1px solid var(--line);border-radius:4px;background:#FCFDFE;}
+.sum-row{display:flex;align-items:flex-start;gap:10px;}
+.sum-row+.sum-row{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line-2);}
+.sum-k{flex:0 0 62px;font-size:12px;line-height:22px;color:var(--t3);}
+.sum-k b{margin-left:4px;color:var(--t1);font-weight:600;font-variant-numeric:tabular-nums;}
+.chips{display:flex;flex-wrap:wrap;align-items:center;gap:6px;flex:1;min-width:0;max-height:100px;overflow:auto;padding:1px 0;}
+.chips::-webkit-scrollbar{width:8px;}
+.chips::-webkit-scrollbar-thumb{background:#D9DEE6;border-radius:4px;}
+.chip{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 8px;border-radius:3px;background:var(--blue-2);border:1px solid var(--blue-line);color:#2C5F8A;font:11.5px/1 Consolas,Monaco,monospace;}
+.chip.target{background:var(--grn-bg);border-color:var(--grn-line);color:var(--grn-t);font-weight:600;}
+.chip[data-goto]{cursor:pointer;}
+.chip[data-goto]:hover{border-color:#8AC5FF;}
+.chip.target[data-goto]:hover{border-color:var(--grn);}
+.chip .chip-x{border:0;background:none;padding:0 1px;margin-left:1px;color:#93A2B4;font-size:12px;line-height:1;font-family:inherit;cursor:pointer;}
+.chip .chip-x:hover{color:var(--t1);}
+.sum-cn{font-size:12px;line-height:22px;color:var(--t3);}
+.sum-empty{font-size:12px;line-height:22px;color:#C0C4CC;}
+
+/* ---------- 表下分页 ---------- */
+.pager{display:flex;align-items:center;gap:12px;margin-top:8px;font-size:12px;color:var(--t3);}
+.pager b{font-weight:600;color:var(--t2);font-variant-numeric:tabular-nums;}
+.pager-acts{margin-left:auto;display:flex;align-items:center;gap:8px;}
+/* BOE_COMPONENT_STYLE_START: 4-6-pagination */
+/* ════════════════════════════════════════
+   分页器组件样式
+════════════════════════════════════════ */
+
+/* ── 基础容器 ── */
+.boe-pagination {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  user-select: none;
+}
+
+/* ── 页码 / 前后翻页按钮 ── */
+.boe-page-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--color-border-base, #e1e4eb);
+  border-radius: var(--radius-control, 4px);
+  background: var(--color-bg-page, #fff);
+  color: var(--color-text-primary, #303133);
+  font-size: 14px;
+  font-family: var(--font-family-base, inherit);
+  cursor: pointer;
+  transition: border-color .15s, color .15s, background .15s;
+  line-height: 1;
+  white-space: nowrap;
+}
+.boe-page-btn:hover:not(:disabled):not(.active) {
+  border-color: var(--color-primary-default, #0081FF);
+  color: var(--color-primary-default, #0081FF);
+}
+.boe-page-btn.active {
+  background: var(--color-primary-default, #0081FF);
+  border-color: var(--color-primary-default, #0081FF);
+  color: var(--color-text-inverse, #fff);
+  cursor: default;
+}
+.boe-page-btn:disabled, .boe-page-btn.disabled {
+  color: var(--color-border-light, #d7dae0);
+  border-color: var(--color-border-base, #e1e4eb);
+  background: var(--color-bg-page, #fff);
+  cursor: not-allowed;
+}
+
+/* ── 省略号 ── */
+.boe-page-ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  color: var(--color-text-tertiary, #909399);
+  font-size: 14px;
+  letter-spacing: 2px;
+  cursor: default;
+}
+
+/* ── 前后翻页箭头 SVG ── */
+.boe-page-arrow {
+  width: 14px; height: 14px;
+  fill: none; stroke: currentColor;
+  stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round;
+  flex-shrink: 0;
+}
+
+/* ── 每页条数下拉 ── */
+.boe-page-size-select {
+  height: 32px;
+  padding: 0 24px 0 10px;
+  border: 1px solid var(--color-border-base, #e1e4eb);
+  border-radius: var(--radius-control, 4px);
+  background-color: var(--color-bg-page, #fff);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--color-text-tertiary, #909399) 50%),
+    linear-gradient(135deg, var(--color-text-tertiary, #909399) 50%, transparent 50%);
+  background-position: calc(100% - 10px) 50%, calc(100% - 5px) 50%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  font-size: 13px;
+  color: var(--color-text-primary, #303133);
+  font-family: var(--font-family-base, inherit);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  outline: none;
+  transition: border-color .15s;
+}
+.boe-page-size-select:hover { border-color: var(--color-primary-default, #0081FF); }
+.boe-page-size-select:focus { border-color: var(--color-primary-default, #0081FF); box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary-default, #0081FF) 10%, transparent); }
+
+/* ── 容器（本页总量放在 .pager 左侧，不用 boe-pagination-total） ── */
+.boe-pagination-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── 迷你版：表格底部用 24px ── */
+.boe-pagination.mini .boe-page-btn {
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  font-size: var(--font-size-t09, 12px);
+}
+.boe-pagination.mini .boe-page-ellipsis {
+  min-width: 24px;
+  height: 24px;
+  font-size: var(--font-size-t09, 12px);
+}
+.boe-pagination.mini .boe-page-arrow { width: 11px; height: 11px; }
+.boe-pagination-wrap.mini .boe-page-size-select {
+  height: 24px; font-size: var(--font-size-t09, 12px); padding: 0 20px 0 8px;
+}
+/* BOE_COMPONENT_STYLE_END: 4-6-pagination */
+
+
+
+/* ---------- 数据集划分与验证：独立浅底容器 ---------- */
+.sect{margin-top:16px;padding:13px 16px 15px;border:1px solid var(--line);border-radius:6px;background:#FAFBFC;}
+.sect-head{display:flex;align-items:center;justify-content:space-between;gap:16px;}
+.sect-head h3,.blk-title{display:flex;align-items:center;gap:8px;margin:0;font-size:13px;font-weight:600;letter-spacing:.1px;}
+.blk-title{margin:0 0 10px;}
+.sect-head h3:before,.blk-title:before{content:"";flex:0 0 auto;width:3px;height:12px;border-radius:2px;background:var(--blue);}
+.sect-sub{margin:8px 0 20px;font-size:12px;line-height:1.6;color:var(--t3);}
+.sf-row{display:flex;align-items:center;gap:22px;flex-wrap:wrap;}
+.sf-row+.sf-row{margin-top:10px;}
+.sf{position:relative;display:inline-flex;align-items:center;gap:8px;font-size:12px;color:var(--t2);}
+.sf>span{flex:0 0 auto;width:62px;color:#5E6674;}
+.sf input{width:78px;height:28px;padding:0 9px;border:1px solid var(--line);border-radius:4px;background:#fff;color:var(--t1);font-size:12px;line-height:1;font-family:inherit;font-variant-numeric:tabular-nums;}
+.sf.has-unit input{padding-right:24px;}
+.sf input:hover{border-color:#A9B4C4;}
+.sf input:focus{outline:none;border-color:var(--blue);}
+.sf em{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-style:normal;font-size:12px;color:var(--t3);pointer-events:none;}
+.split-ctl select{width:150px;}
+.split-dates{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:0 0 10px;}
+.split-dates>div{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.split-dates b{grid-column:1/-1;font-size:12px;font-weight:400;color:#5E6674;}
+.split-dates input{width:100%;height:28px;padding:0 9px;border:1px solid var(--line);border-radius:4px;background:#fff;color:var(--t1);font-size:12px;line-height:1;font-family:inherit;font-variant-numeric:tabular-nums;}
+.split-dates input:hover{border-color:#A9B4C4;}
+.split-dates input:focus{outline:none;border-color:var(--blue);}
+.split-help{margin:10px 0 0;font-size:12px;line-height:1.7;color:var(--t3);}
+.part-wrap{margin-top:12px;padding-top:12px;border-top:1px solid var(--line-2);}
+.part-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:8px;font-size:12px;font-weight:600;color:var(--t2);}
+.part-head span{font-weight:400;color:var(--t3);font-variant-numeric:tabular-nums;}
+.part-bar{display:flex;gap:2px;height:26px;border-radius:3px;overflow:hidden;font-size:11.5px;line-height:26px;text-align:center;font-variant-numeric:tabular-nums;}
+.part-bar span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.part-tr{background:var(--blue-1);color:var(--blue-h);}
+.part-va{background:var(--grn-bg);color:var(--grn-t);}
+.part-te{background:#F4F5F7;color:#5E6674;}
+/* 日期与上方色块同比例、同 gap，逐段对齐，不再等分三列 */
+.part-ranges{display:flex;gap:2px;margin-top:6px;font-size:11.5px;line-height:1.6;color:var(--t3);font-variant-numeric:tabular-nums;}
+.part-ranges span{min-width:0;text-align:center;}
+.split-err{margin-top:10px;padding:8px 10px;border:1px solid var(--line);border-left:2px solid #5E6674;border-radius:3px;background:#FBFBFC;font-size:12px;line-height:1.7;color:#33506B;}
+.fold{width:100%;margin-top:10px;border:1px solid var(--line);border-radius:4px;border-collapse:separate;border-spacing:0;overflow:hidden;font-size:12px;background:#fff;}
+.fold th{padding:6px 10px;border-bottom:1px solid var(--line);background:#FAFBFC;font-size:11px;font-weight:600;color:var(--t3);text-align:left;}
+.fold td{padding:6px 10px;border-bottom:1px solid var(--line-2);color:var(--t2);font-variant-numeric:tabular-nums;}
+.fold tr:last-child td{border-bottom:0;}
+.fold th:first-child,.fold td:first-child{width:76px;}
+.fold th:last-child,.fold td:last-child{width:76px;}
+
+.dw-foot{display:flex;align-items:center;gap:12px;padding:12px 20px;border-top:1px solid var(--line-2);background:#FCFDFE;}
+.dw-acts{margin-left:auto;display:flex;gap:8px;}
+.btn{height:30px;padding:0 14px;border-radius:4px;border:1px solid var(--line);background:#fff;color:var(--t2);font:13px inherit;font-family:inherit;cursor:pointer;}
+.btn:hover{border-color:#A9B4C4;}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff;}
+.btn.primary:hover{background:var(--blue-h);border-color:var(--blue-h);}
+
+.toast{position:fixed;left:50%;bottom:36px;transform:translate(-50%,12px);background:rgba(31,38,48,.9);color:#fff;font-size:12.5px;padding:8px 14px;border-radius:4px;opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;}
+.toast.on{opacity:1;transform:translate(-50%,0);}
+
+/* ---------- 框选 ---------- */
+.marq-box{position:fixed;z-index:9998;border:1px solid var(--blue);border-radius:2px;pointer-events:none;}
+.marq-box::before{content:"";position:absolute;inset:0;background:var(--blue);opacity:.10;}
+.ptable th.mq{outline:1.5px dashed var(--blue);outline-offset:-2px;}
+body.mqing{user-select:none;cursor:crosshair;}
+body.mqing .ptable{cursor:crosshair;}
+</style>
+</head>
+<body data-page-node-id="LgHpBGIyidPJX68y4I5Z9w">
+<div class="wrap" data-page-node-id="3T5uEgL0HnqYNZ4h7oJEWR">
+
+  <div class="head" data-page-node-id="GATWINQo8VO2nLznAefrgW">
+    <h1 data-page-node-id="v5AnPZ9uNVAymvVxFILwGY">「核对数据与字段」抽屉 · 分组表头 + 分区展开</h1>
+    <p data-page-node-id="GJMfr1fGDbyhbjpAgjmeFf">索引区固定，特征区与目标区共用一条分界线：点哪一侧，分界线推过去，该侧露出的列变多，另一侧退到只留一列。预览分页只影响展示，数据集划分按全量有效日样本计算。</p>
+  </div>
+
+  <div class="stage" data-page-node-id="8gAC8NfygXmSEZeK9AC8Wd">
+    <div class="drawer" data-page-node-id="Cq4TovCBub3iXVeSHeFUQY">
+      <div class="dw-head" data-page-node-id="xVPe4AGMZspEsmrL0Ezd64">
+        <div class="dw-title" data-page-node-id="hdHkGesTVpED7bS63ufyw2">
+          <h2 data-page-node-id="FqVuHrkOjBv3DkY89pEVVp">核对数据与字段<span class="dw-step" data-page-node-id="9tmMvd05peyGyPTB6MceKp">第 2 步 / 共 3 步</span></h2>
+          <p data-page-node-id="InRoNJIhTyCdk9KstutqqY">AYM 质量统计数据源 · 2026-07-15 ~ 2026-11-10 · 全部产品 · 119 条匹配记录</p>
+        </div>
+        <div class="dw-top" data-page-node-id="3QkHqDnsGM7FJqYWzchStc">
+          <button class="dw-close" aria-label="关闭" data-page-node-id="ccP3VJqKVgNCW79UGXd4Az">×</button>
+        </div>
+      </div>
+      <div class="dw-body" data-page-node-id="YbFF8crMON6wag5g4K8gU9">
+        <h3 class="blk-title">数据预览</h3>
+        <div class="bar" data-page-node-id="9FrZGajqLjsga7lxozVkyU">
+          <div class="mode" data-page-node-id="cjwumOHoIpaMmwIc2p4lr7">
+            <button type="button" data-mode="feat" data-page-node-id="hY1mGz1BX5yLOwgxZkB5jw">选特征</button>
+            <button type="button" data-mode="target" data-page-node-id="6cVZJFokF5iWv0apAFbJeK">定目标</button>
+            <span class="hint-info" tabindex="0" aria-label="操作说明">
+              <i>i</i>
+              <span class="hint-tip" role="tooltip">拖动表头可框选连续特征，单击切换单列；点候选列或「定目标」切换目标。日期 / 标识列不可选。</span>
+            </span>
+          </div>
+          <span class="legend" data-page-node-id="KtW8sUxxAFrDpN4JWXoDhw"><span data-page-node-id="gI1aEfcnPCqA7yao9ELCyF"><i class="lg-f" data-page-node-id="0ExIiaRlKTDHs0UwL1xxoR"></i>特征</span><span data-page-node-id="pmxMxnWAv9kBCONxFiSjST"><i class="lg-t" data-page-node-id="msytqxvlPVv7zMBYvCHpSi"></i>目标</span><span data-page-node-id="HkfLoAn2ZjMw3MBLIro8wZ"><i class="lg-n" data-page-node-id="SboYNXeJgnpyRHVB7hdvOE"></i>未选</span><span data-page-node-id="TEdEkTJg74SqvQ5naygGJt"><i class="lg-l" data-page-node-id="6MF5gGUvAkBVescBKK63u0"></i>不可选</span></span>
+        </div>
+
+        <div class="zones" id="zones" data-focus="feat" data-page-node-id="Gm9x6RWXqMvR3ci2nRKbE6">
+          <div class="zone z-lock" data-zone="lock" data-page-node-id="sC4m7dbF7UgOjAPvRqeMEQ"></div>
+          <div class="zone z-feat" data-zone="feat" data-page-node-id="HJGfIn2EVOLojJiFJDnkk3"></div>
+          <div class="zone z-tgt" data-zone="tgt" data-page-node-id="CgZj35OLr0IcXTMau9upIl"></div>
+        </div>
+
+        <div class="pager" data-page-node-id="dH82XgzuACxyxWxFxFS7WK">
+          <span data-page-node-id="GgYHSXO7yhBymkk7kg1RqK">共 <b id="pgTotal" data-page-node-id="lDVY5B1vHZqNea41JTcXMF">119</b> 条</span>
+          <div class="pager-acts" data-page-node-id="F0fJIUV8CDH60GJ3qjCdSc">
+            <div class="boe-pagination-wrap mini" data-boe-component="pagination" data-boe-variant="page-size">
+              <div class="boe-pagination mini" id="pgPages">
+                <button type="button" class="boe-page-btn disabled" disabled aria-label="上一页" title="上一页"><svg class="boe-page-arrow" viewBox="0 0 14 14" aria-hidden="true"><polyline points="9,2 4,7 9,12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                <button type="button" class="boe-page-btn active" aria-current="page">1</button>
+                <button type="button" class="boe-page-btn">2</button>
+                <button type="button" class="boe-page-btn">3</button>
+                <button type="button" class="boe-page-btn">4</button>
+                <button type="button" class="boe-page-btn">5</button>
+                <button type="button" class="boe-page-btn">6</button>
+                <button type="button" class="boe-page-btn" aria-label="下一页" title="下一页"><svg class="boe-page-arrow" viewBox="0 0 14 14" aria-hidden="true"><polyline points="5,2 10,7 5,12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+              </div>
+              <select class="boe-page-size-select" id="pgSize" aria-label="每页条数">
+                <option value="10">10 条/页</option>
+                <option value="20" selected>20 条/页</option>
+                <option value="50">50 条/页</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="sum" data-page-node-id="KYEXhsW3QrI7vsOmSZ7qID">
+          <div class="sum-row" data-page-node-id="TcYr71VkpREZppwsncTFDs">
+            <span class="sum-k" data-page-node-id="uVTbyLMhuMxFDjJHRtFoeQ">目标列</span>
+            <div class="chips" id="sumT" data-page-node-id="FBx8k5KYHVgqbelJ9w7EVy"></div>
+          </div>
+          <div class="sum-row" data-page-node-id="mZXVyz6eNjJhfN3Qe3FM9N">
+            <span class="sum-k" data-page-node-id="68xqvFKfncibLJkKjyD6aa">特征列<b id="sumN" data-page-node-id="F2B0Q4qh9NYYGNevkmicpP">0</b></span>
+            <div class="chips" id="sumF" data-page-node-id="wRtZExQZTrSdpsXhpi2iFI"></div>
+          </div>
+        </div>
+
+        <section class="sect" id="splitSec" data-page-node-id="OZFtYPRxbuXDTvjVQGJ8wC">
+          <div class="sect-head" data-page-node-id="YUIuFdRctMQs4aUZQsin1J">
+            <h3 data-page-node-id="Wca1MeG6H5JCX1QA1kGNiF">数据集划分与验证</h3>
+            <button type="button" class="link-btn" data-split="reset" data-page-node-id="9s7YHcymLJyl1LQmIKIpZ6">恢复推荐</button>
+          </div>
+          <p class="sect-sub" data-page-node-id="xoHgjoHtfwdxw2nXA7AoiP">按全量有效日样本划分，预览分页不影响范围。</p>
+          <div class="sf-row split-ctl" data-page-node-id="eSwRHcndwJnDxf9wTbjZIT">
+            <label class="sf" data-page-node-id="t6IAvTr1z21CECbvU7pXaq"><span data-page-node-id="g80pQAYu0RrV4TUb7KfHZx">划分方式</span>
+              <select id="dsMode" data-page-node-id="Cp627maBsVxlqsBpFLTk33"><option value="ratio" data-page-node-id="ilGhaIYuV70UAxz8Ub9CRC">按时间比例</option><option value="dates" data-page-node-id="M04YUTfSReLS4WcrB4SjHc">指定日期范围</option></select>
+            </label>
+            <label class="sf" data-page-node-id="u8tv2hZoPZ996RPfJUKm14"><span data-page-node-id="JTHkuAS48J24rdkTRGe1m4">验证方式</span>
+              <select id="dsMethod" data-page-node-id="Vqwpxi0JExGtlUAzJJ4XwI"><option value="holdout" data-page-node-id="XS9AqIBHkL45A4CXsizfnc">独立验证集</option><option value="rolling" data-page-node-id="Ggr3NzAXf5EyOFWJg8Tbxj">时间序列交叉验证</option></select>
+            </label>
+          </div>
+          <div id="splitBody" data-page-node-id="g2N66fm3eRiwzv1VDBkuW4"></div>
+          <div id="splitPreview" data-page-node-id="ZmVqYofHsDEzyl5gQUOrKm"></div>
+        </section>
+      </div>
+      <div class="dw-foot" data-page-node-id="OG4D38BX336DaFqFEMTL2q">
+        <div class="dw-acts" data-page-node-id="0oWauB6eLjal7urLxbD53T"><button class="btn" data-page-node-id="20JN5aGEyDCbTHvvHbhmsf">返回修改条件</button><button class="btn" data-page-node-id="bAOGOxPv0EeoLiq2Txp8wP">保存</button><button class="btn primary" data-page-node-id="oYxz21v73wFyFox2wS21Rm">开始预测</button></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<div class="toast" id="toast" data-page-node-id="dFEXLlmarftjSzodi6BwVe"></div>
+
+<script>
+(function(){
+'use strict';
+
+var COLS=[
+  {k:'TIME_KEY',cn:'日期标识',t:'date'},
+  {k:'PRODUCT_ID',cn:'产品标识',t:'id'},
+  {k:'TARGET_LAG_1',cn:'前 1 日良率',t:'num'},
+  {k:'TARGET_LAG_2',cn:'前 2 日良率',t:'num'},
+  {k:'TARGET_LAG_3',cn:'前 3 日良率',t:'num'},
+  {k:'TARGET_LAG_7',cn:'前 7 日良率',t:'num'},
+  {k:'TARGET_LAG_14',cn:'前 14 日良率',t:'num'},
+  {k:'ROLLING_MEAN_3',cn:'3 日均值',t:'num'},
+  {k:'ROLLING_MEAN_7',cn:'7 日均值',t:'num'},
+  {k:'ROLLING_MEAN_14',cn:'14 日均值',t:'num'},
+  {k:'ROLLING_STD_3',cn:'3 日标准差',t:'num'},
+  {k:'ROLLING_STD_7',cn:'7 日标准差',t:'num'},
+  {k:'ROLLING_STD_14',cn:'14 日标准差',t:'num'},
+  {k:'DAY_OF_WEEK',cn:'星期',t:'num'},
+  {k:'WEEK_OF_YEAR',cn:'年内周次',t:'num'},
+  {k:'MONTH_NO',cn:'月份',t:'num'},
+  {k:'OUT_LAG_1',cn:'前 1 日产出',t:'num'},
+  {k:'YIELD_RATE',cn:'良率',t:'num',tg:1},
+  {k:'PASS_QTY',cn:'合格片数',t:'num',tg:1},
+  {k:'SHIP_QTY',cn:'出货量',t:'num',tg:1},
+  {k:'INPUT_QTY',cn:'投入量',t:'num',tg:1},
+  {k:'DEFECT_QTY',cn:'不良数',t:'num',tg:1},
+  {k:'REWORK_QTY',cn:'返修数',t:'num',tg:1},
+  {k:'SCRAP_QTY',cn:'报废数',t:'num',tg:1},
+  {k:'UPH',cn:'单时产能',t:'num',tg:1},
+  {k:'TACT_TIME',cn:'平均节拍',t:'num',tg:1},
+  {k:'EQUIP_UTIL',cn:'设备稼动率',t:'num',tg:1}
+];
+
+var ST={target:'YIELD_RATE',feats:['TARGET_LAG_1','TARGET_LAG_7','ROLLING_MEAN_7','ROLLING_STD_7']};
+
+/* none = 初始；feat / target = 该侧展开，分界线推过去 */
+var MODE='feat';
+var N=119;
+
+var REC=(function(){
+  var out=[],i,d,yr=[],inp=[],W=14;
+  for(i=0;i<N+W;i++){
+    yr.push(96.9+Math.sin(i/9)*0.55+Math.sin(i/2.1)*0.07+Math.sin(i*1.7)*0.05);
+    inp.push(36200+Math.sin(i/6)*1400+Math.sin(i/1.9)*260+(i%7)*40);
+  }
+  function f2(v){return v.toFixed(2);}
+  function mean(a){var s=0,k;for(k=0;k<a.length;k++){s+=a[k];}return s/a.length;}
+  function std(a){var m=mean(a),s=0,k;for(k=0;k<a.length;k++){s+=(a[k]-m)*(a[k]-m);}return Math.sqrt(s/a.length);}
+  function win(n,end){return yr.slice(Math.max(0,end-n+1),end+1);}
+  function p2(n){return n<10?'0'+n:''+n;}
+  for(i=0;i<N;i++){
+    d=new Date(2026,6,15+i);
+    var p=i+W;
+    var w3=win(3,p), w7=win(7,p), w14=win(14,p);
+    var jan1=new Date(d.getFullYear(),0,1);
+    var inQ=Math.round(inp[p]);
+    var passQ=Math.round(inQ*yr[p]/100);
+    var defQ=inQ-passQ;
+    var rewQ=Math.round(defQ*0.28);
+    var uph=Math.round(passQ/24);
+    out.push({
+      TIME_KEY:d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate()),
+      PRODUCT_ID:'ALL_PRODUCTS',
+      TARGET_LAG_1:f2(yr[p-1]),
+      TARGET_LAG_2:f2(yr[p-2]),
+      TARGET_LAG_3:f2(yr[p-3]),
+      TARGET_LAG_7:f2(yr[p-7]),
+      TARGET_LAG_14:f2(yr[p-14]),
+      ROLLING_MEAN_3:f2(mean(w3)),
+      ROLLING_MEAN_7:f2(mean(w7)),
+      ROLLING_MEAN_14:f2(mean(w14)),
+      ROLLING_STD_3:f2(std(w3)),
+      ROLLING_STD_7:f2(std(w7)),
+      ROLLING_STD_14:f2(std(w14)),
+      DAY_OF_WEEK:String(d.getDay()),
+      WEEK_OF_YEAR:String(Math.floor((Math.round((d-jan1)/86400000)+jan1.getDay())/7)+1),
+      MONTH_NO:String(d.getMonth()+1),
+      OUT_LAG_1:String(Math.round(inp[p-1]*yr[p-1]/100)),
+      YIELD_RATE:f2(yr[p]),
+      PASS_QTY:String(passQ),
+      SHIP_QTY:String(Math.round(passQ*(0.955+Math.sin(i/8)*0.012))),
+      INPUT_QTY:String(inQ),
+      DEFECT_QTY:String(defQ),
+      REWORK_QTY:String(rewQ),
+      SCRAP_QTY:String(defQ-rewQ),
+      UPH:String(uph),
+      TACT_TIME:(3600/uph).toFixed(2),
+      EQUIP_UTIL:(87.4+Math.sin(i/5.5)*2.6+Math.sin(i/1.3)*0.5).toFixed(1)
+    });
+  }
+  return out;
+})();
+
+var COLW=108;
+
+/* 分页只影响预览展示，不改变划分范围 */
+var PG={size:20,page:1};
+/* 数据集划分与验证 */
+var SP={mode:'ratio',method:'holdout',train:70,val:15,test:15,folds:3,window:7,gap:0,ranges:null};
+var DAYS=REC.map(function(r){return r.TIME_KEY;});
+
+function $(id){return document.getElementById(id);}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function colOf(k){for(var i=0;i<COLS.length;i++){if(COLS[i].k===k){return COLS[i];}}return null;}
+function ixOf(k){for(var i=0;i<COLS.length;i++){if(COLS[i].k===k){return i;}}return -1;}
+function has(a,k){return a.indexOf(k)>-1;}
+function isTg(k){var c=colOf(k);return !!c&&!!c.tg;}
+function isTgtZone(k){return isTg(k)||k===ST.target;}
+function canFeature(k){var c=colOf(k);return !!c&&c.t==='num'&&!c.tg&&k!==ST.target;}
+function canTarget(k){var c=colOf(k);return !!c&&c.t==='num';}
+
+function lockKeys(){ return COLS.filter(function(c){return c.t==='date'||c.t==='id';}).map(function(c){return c.k;}); }
+function poolKeys(){ return COLS.filter(function(c){return c.t==='num'&&!c.tg&&c.k!==ST.target;}).map(function(c){return c.k;}); }
+function featKeys(){ return poolKeys(); }
+function tgtKeys(){
+  var a=COLS.filter(function(c){return !!c.tg;}).map(function(c){return c.k;});
+  if(a.indexOf(ST.target)<0){ a.push(ST.target); }
+  return a;
+}
+
+function bulkHTML(){
+  return '<span class="bulk">'+
+    '<b data-bulk-count>'+ST.feats.length+' / '+poolKeys().length+'</b>'+
+    '<button type="button" data-bulk="all">全选</button>'+
+    '<button type="button" data-bulk="inv">反选</button>'+
+    '<button type="button" data-bulk="none">清空</button>'+
+  '</span>';
+}
+
+function thHTML(k){
+  var c=colOf(k), ix=ixOf(k);
+  var isT=k===ST.target, isF=has(ST.feats,k), isLock=(c.t==='date'||c.t==='id');
+  var isCand=isTg(k)&&!isT;
+  var zone=isLock?'lock':isTgtZone(k)?'tgt':'feat';
+  var cls=(isT?'role-target':isCand?'role-cand':isF?'role-feature':'')+(isLock?' is-lock':'');
+  var role=isT?'目标列':isCand?'候选':isF?'特征列':isLock?(c.t==='date'?'日期列':'标识列'):'未选';
+  var mark=(isT||isCand)?'<i class="rb radio'+(isT?' on':'')+'"></i>':isF?'<i class="rb on"></i>':isLock?'<i class="rb lock"></i>':'<i class="rb"></i>';
+  return '<th class="'+cls+'" data-col="'+ix+'" data-key="'+k+'" data-zone="'+zone+'"'+
+    (isLock?' aria-disabled="true"':' tabindex="0" role="'+(isTgtZone(k)?'radio':'checkbox')+'" aria-checked="'+(isT||isF?'true':'false')+'"')+'>'+
+    '<span class="th-role">'+mark+role+'</span>'+
+    '<span class="th-name">'+esc(k)+'</span>'+
+    '<span class="th-cn">'+c.cn+'</span>'+
+  '</th>';
+}
+
+function pgStart(){ return (PG.page-1)*PG.size; }
+function pgEnd(){ return Math.min(REC.length,pgStart()+PG.size); }
+function pageCount(){ return Math.max(1,Math.ceil(REC.length/PG.size)); }
+
+function tbodyRows(zone){
+  var h='',r,j,k,cks,from=pgStart(),to=pgEnd();
+  for(r=from;r<to;r++){
+    h+='<tr data-r="'+r+'">';
+    if(zone==='lock'){
+      var lk=lockKeys();
+      h+='<td class="row-ix">'+(r+1)+'</td>';
+      for(j=0;j<lk.length;j++){ h+='<td class="is-lock">'+esc(REC[r][lk[j]])+'</td>'; }
+    }else if(zone==='tgt'){
+      cks=tgtKeys();
+      for(j=0;j<cks.length;j++){
+        k=cks[j];
+        h+='<td class="'+(k===ST.target?'role-target':'role-cand')+'">'+esc(REC[r][k])+'</td>';
+      }
+    }else{
+      cks=featKeys();
+      for(j=0;j<cks.length;j++){
+        k=cks[j];
+        h+='<td class="'+(has(ST.feats,k)?'role-feature':'')+'">'+esc(REC[r][k])+'</td>';
+      }
+    }
+    h+='</tr>';
+  }
+  return h;
+}
+
+function zoneHTML(zone){
+  var h='',i,keys,cols='',w=0;
+  if(zone==='lock'){
+    keys=lockKeys();
+    h+='<colgroup><col style="width:44px"><col style="width:118px"><col style="width:132px"></colgroup>';
+    h+='<thead><tr class="grp-row"><th class="row-ix" rowspan="2">序号</th><th class="grp-lock" colspan="'+keys.length+'">索引字段 · 不可选</th></tr><tr>';
+  }else if(zone==='tgt'){
+    keys=tgtKeys();
+    for(i=0;i<keys.length;i++){ cols+='<col style="width:'+COLW+'px">'; }
+    h+='<colgroup>'+cols+'</colgroup>';
+    h+='<thead><tr class="grp-row"><th class="grp-tgt" colspan="'+keys.length+'">'+
+        '<span class="band-sticky">目标列 · 单选 <b class="band-n">1 / '+keys.length+'</b></span>'+
+      '</th></tr><tr>';
+  }else{
+    keys=featKeys();
+    for(i=0;i<keys.length;i++){ cols+='<col style="width:'+COLW+'px">'; w+=COLW; }
+    h+='<colgroup>'+cols+'</colgroup>';
+    h+='<thead><tr class="grp-row"><th class="grp-feat" colspan="'+keys.length+'">'+
+        '<span class="band-in"><span class="band-t">特征列 · 多选</span>'+bulkHTML()+'</span>'+
+      '</th></tr><tr>';
+  }
+  for(i=0;i<keys.length;i++){ h+=thHTML(keys[i]); }
+  h+='</tr></thead><tbody>'+tbodyRows(zone)+'</tbody>';
+  return h;
+}
+
+function render(){
+  ['lock','feat','tgt'].forEach(function(z){
+    var el=document.querySelector('.zone[data-zone="'+z+'"]');
+    var sl=el.scrollLeft, st=el.scrollTop;
+    el.innerHTML='<table class="ptable">'+zoneHTML(z)+'</table>';
+    if(z==='feat'){ el.querySelector('table').style.width=(featKeys().length*COLW)+'px'; }
+    if(z==='tgt'){ el.querySelector('table').style.width=(tgtKeys().length*COLW)+'px'; }
+    el.scrollLeft=sl; el.scrollTop=st;
+  });
+  renderSums();
+  renderPager();
+  renderSplit();
+}
+
+/* BOE 4-6-pagination：箭头 SVG 与页码窗口算法照组件库 runtime */
+var PG_LEFT='<svg class="boe-page-arrow" viewBox="0 0 14 14" aria-hidden="true"><polyline points="9,2 4,7 9,12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+var PG_RIGHT='<svg class="boe-page-arrow" viewBox="0 0 14 14" aria-hidden="true"><polyline points="5,2 10,7 5,12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+function pageList(cur,total){
+  if(total<=7){ var a=[],i; for(i=1;i<=total;i++){ a.push(i); } return a; }
+  if(cur<=4){ return [1,2,3,4,5,'…',total]; }
+  if(cur>=total-3){ return [1,'…',total-4,total-3,total-2,total-1,total]; }
+  return [1,'…',cur-2,cur-1,cur,cur+1,cur+2,'…',total];
+}
+function renderPager(){
+  var pc=pageCount();
+  if(PG.page>pc){ PG.page=pc; }
+  $('pgTotal').textContent=REC.length;
+  $('pgSize').value=String(PG.size);
+  var box=$('pgPages');
+  box.innerHTML='';
+  function go(p){
+    if(p===PG.page){ return; }
+    PG.page=p;
+    ['lock','feat','tgt'].forEach(function(z){
+      var el=document.querySelector('.zone[data-zone="'+z+'"]');
+      if(el){ el.scrollTop=0; }
+    });
+    render();
+  }
+  var prev=document.createElement('button');
+  prev.type='button';
+  prev.className='boe-page-btn'+(PG.page===1?' disabled':'');
+  prev.disabled=PG.page===1;
+  prev.setAttribute('aria-label','上一页'); prev.title='上一页';
+  prev.innerHTML=PG_LEFT;
+  if(PG.page>1){ prev.onclick=function(){ go(PG.page-1); }; }
+  box.appendChild(prev);
+  pageList(PG.page,pc).forEach(function(p){
+    if(p==='…'){
+      var el=document.createElement('span');
+      el.className='boe-page-ellipsis'; el.textContent='…';
+      box.appendChild(el); return;
+    }
+    var b=document.createElement('button');
+    b.type='button';
+    b.className='boe-page-btn'+(p===PG.page?' active':'');
+    b.textContent=p;
+    if(p===PG.page){ b.setAttribute('aria-current','page'); }
+    else{ b.onclick=function(){ go(p); }; }
+    box.appendChild(b);
+  });
+  var next=document.createElement('button');
+  next.type='button';
+  next.className='boe-page-btn'+(PG.page===pc?' disabled':'');
+  next.disabled=PG.page===pc;
+  next.setAttribute('aria-label','下一页'); next.title='下一页';
+  next.innerHTML=PG_RIGHT;
+  if(PG.page<pc){ next.onclick=function(){ go(PG.page+1); }; }
+  box.appendChild(next);
+}
+
+function renderSums(){
+  var t=colOf(ST.target);
+  $('sumT').innerHTML='<span class="chip target" data-goto="'+ST.target+'">'+esc(t.k)+'</span>'+
+    '<span class="sum-cn">'+esc(t.cn)+'</span>';
+  $('sumN').textContent=ST.feats.length;
+  $('sumF').innerHTML=ST.feats.length
+    ? ST.feats.map(function(k){
+        return '<span class="chip" data-goto="'+k+'">'+esc(k)+
+          '<button type="button" class="chip-x" data-rm="'+k+'" aria-label="移除 '+esc(k)+'">×</button></span>';
+      }).join('')
+    : '<span class="sum-empty">尚未选择特征列</span>';
+  var bc=document.querySelector('[data-bulk-count]');
+  if(bc){ bc.textContent=ST.feats.length+' / '+poolKeys().length; }
+}
+
+
+/* ---------- 数据集划分与验证 ---------- */
+function isDateStr(s){ return typeof s==='string' && /^\d{4}-\d{2}-\d{2}$/.test(s); }
+function isInt(v,min,max){ return typeof v==='number' && isFinite(v) && Math.floor(v)===v && v>=min && v<=max; }
+function subRange(rg){ return DAYS.filter(function(d){ return d>=rg.start && d<=rg.end; }); }
+function rangeOf(list){ return { start:list.length?list[0]:'', end:list.length?list[list.length-1]:'', count:list.length }; }
+function splitDefaults(){ return {mode:'ratio',method:'holdout',train:70,val:15,test:15,folds:3,window:7,gap:0,ranges:null}; }
+
+function computeSplit(){
+  var n=DAYS.length, tr, va, te, i, folds=[], keys, rg, r;
+  if(!n){ return {error:'当前没有可划分的日度样本。'}; }
+
+  if(SP.mode==='ratio'){
+    if(!(SP.train>0)||!(SP.val>0)||!(SP.test>0)||(SP.train+SP.val+SP.test)!==100){
+      return {error:'训练、验证、测试比例均需大于 0，合计为 100%。'};
+    }
+    var a=Math.floor(n*SP.train/100), b=Math.floor(n*SP.val/100);
+    tr=DAYS.slice(0,a); va=DAYS.slice(a,a+b); te=DAYS.slice(a+b);
+  }else{
+    rg=SP.ranges;
+    if(!rg){ return {error:'请填写三组日期范围。'}; }
+    keys=['train','validation','test'];
+    for(i=0;i<keys.length;i++){
+      r=rg[keys[i]];
+      if(!r||!isDateStr(r.start)||!isDateStr(r.end)||r.start>r.end){
+        return {error:'请填写有效且开始不晚于结束的日期范围。'};
+      }
+      if(r.start<DAYS[0]||r.end>DAYS[n-1]){
+        return {error:'划分范围须在有效样本 '+DAYS[0]+' 至 '+DAYS[n-1]+' 内。'};
+      }
+    }
+    if(rg.train.end>=rg.validation.start||rg.validation.end>=rg.test.start){
+      return {error:'请按训练 → 验证 → 测试排列日期，各区间不能重叠。'};
+    }
+    tr=subRange(rg.train); va=subRange(rg.validation); te=subRange(rg.test);
+  }
+
+  if(tr.length<14||!va.length||!te.length){
+    return {error:'训练集至少需要 14 个有效日样本，验证集与测试集各至少 1 个。请调整范围或比例。'};
+  }
+
+  if(SP.method==='rolling'){
+    if(!isInt(SP.folds,2,5)||!isInt(SP.window,1,60)||!isInt(SP.gap,0,30)){
+      return {error:'交叉验证设置：2–5 折，验证窗口 1–60 天，间隔 0–30 天，均为整数。'};
+    }
+    var need=14+SP.folds*SP.window+SP.gap;
+    if(tr.length<need){
+      return {error:'训练集不足以完成当前交叉验证：至少需要 '+need+' 天，当前 '+tr.length+' 天。请减少折数 / 窗口，或扩大训练集。'};
+    }
+    for(i=0;i<SP.folds;i++){
+      var vs=tr.length-SP.folds*SP.window+i*SP.window;
+      folds.push({
+        fold:i+1,
+        train:rangeOf(tr.slice(0,vs-SP.gap)),
+        validation:rangeOf(tr.slice(vs,vs+SP.window)),
+        gap:SP.gap
+      });
+    }
+  }
+
+  return {
+    train:rangeOf(tr), validation:rangeOf(va), test:rangeOf(te),
+    unused:n-tr.length-va.length-te.length,
+    method:SP.method, cv:{folds:folds,window:SP.window,gap:SP.gap}
+  };
+}
+
+function spField(id,label,value,unit){
+  var v=(value===null||typeof value==='undefined')?'':value;
+  return '<label class="sf'+(unit?' has-unit':'')+'"><span>'+label+'</span>'+
+    '<input id="'+id+'" type="number" value="'+esc(v)+'" data-sp="1" autocomplete="off">'+
+    (unit?'<em>'+unit+'</em>':'')+
+  '</label>';
+}
+
+function splitBodyHTML(){
+  var h='', rg, keys, r, i, help='';
+  if(SP.mode==='ratio'){
+    h+='<div class="sf-row">'+
+      spField('spTrain','训练集',SP.train,'%')+
+      spField('spVal','验证集',SP.val,'%')+
+      spField('spTest','测试集',SP.test,'%')+
+    '</div>';
+    help='按日期从早到晚分配，比例合计 100%。';
+  }else{
+    rg=SP.ranges||{};
+    keys=[['train','训练集'],['validation','验证集'],['test','测试集']];
+    h+='<div class="split-dates">';
+    for(i=0;i<keys.length;i++){
+      r=rg[keys[i][0]]||{start:'',end:''};
+      h+='<div><b>'+keys[i][1]+'</b>'+
+        '<input id="sp_'+keys[i][0]+'Start" type="date" value="'+esc(r.start||'')+'" data-sp="1">'+
+        '<input id="sp_'+keys[i][0]+'End" type="date" value="'+esc(r.end||'')+'" data-sp="1">'+
+      '</div>';
+    }
+    h+='</div>';
+    help='日期需落在样本区间内，三段不可重叠。';
+  }
+  if(SP.method==='rolling'){
+    h+='<div class="sf-row">'+
+      spField('spFolds','折数',SP.folds)+
+      spField('spWindow','验证窗口',SP.window,'天')+
+      spField('spGap','间隔',SP.gap,'天')+
+    '</div>';
+    help+='仅在训练集内滚动验证，窗口建议覆盖预测跨度。独立验证集用于选型复核，测试集用于最终评估。';
+  }else{
+    help+='训练集学习规律，验证集用于模型选择，测试集用于最终评估。';
+  }
+  h+='<p class="split-help">'+help+'</p>';
+  return h;
+}
+
+function splitPreviewHTML(p){
+  if(p.error){ return '<div class="split-err" role="alert">无法划分：'+esc(p.error)+'</div>'; }
+  var sd=function(d){ return d.slice(5); };
+  var h='<div class="part-wrap">'+
+  '<div class="part-head"><b>划分结果</b><span>'+p.train.start+' ~ '+p.test.end+'</span></div>'+
+  '<div class="part-bar" aria-label="按时间划分">'+
+    '<span class="part-tr" style="flex:'+p.train.count+'">训练 '+p.train.count+' 天</span>'+
+    '<span class="part-va" style="flex:'+p.validation.count+'">验证 '+p.validation.count+' 天</span>'+
+    '<span class="part-te" style="flex:'+p.test.count+'">测试 '+p.test.count+' 天</span>'+
+  '</div>'+
+  '<div class="part-ranges">'+
+    '<span style="flex:'+p.train.count+'">'+sd(p.train.start)+' ~ '+sd(p.train.end)+'</span>'+
+    '<span style="flex:'+p.validation.count+'">'+sd(p.validation.start)+' ~ '+sd(p.validation.end)+'</span>'+
+    '<span style="flex:'+p.test.count+'">'+sd(p.test.start)+' ~ '+sd(p.test.end)+'</span>'+
+  '</div>';
+  if(p.unused){ h+='<p class="split-help">所选区间外有 '+p.unused+' 个日样本未使用。</p>'; }
+  if(p.method==='rolling'){
+    h+='<table class="fold"><thead><tr><th>轮次</th><th>训练范围</th><th>验证范围</th><th>间隔</th></tr></thead><tbody>';
+    for(var i=0;i<p.cv.folds.length;i++){
+      var f=p.cv.folds[i];
+      h+='<tr><td>第 '+f.fold+' 折</td>'+
+        '<td>'+f.train.start+' ~ '+f.train.end+' · '+f.train.count+' 天</td>'+
+        '<td>'+f.validation.start+' ~ '+f.validation.end+' · '+f.validation.count+' 天</td>'+
+        '<td>'+f.gap+' 天</td></tr>';
+    }
+    h+='</tbody></table>';
+  }
+  return h+'</div>';
+}
+
+function refreshSplit(){
+  var p=computeSplit();
+  $('splitPreview').innerHTML=splitPreviewHTML(p);
+}
+
+function renderSplit(){
+  $('splitBody').innerHTML=splitBodyHTML();
+  $('dsMode').value=SP.mode;
+  $('dsMethod').value=SP.method;
+  refreshSplit();
+}
+
+/* 切到「指定日期范围」时，用当前比例划分结果预填三段日期 */
+function syncRangeFromRatio(){
+  var p=computeSplit(), d=DAYS[DAYS.length-1];
+  if(!p.error){
+    SP.ranges={ train:{start:p.train.start,end:p.train.end},
+      validation:{start:p.validation.start,end:p.validation.end},
+      test:{start:p.test.start,end:p.test.end} };
+  }else{
+    SP.ranges={ train:{start:DAYS[0],end:DAYS[0]}, validation:{start:d,end:d}, test:{start:d,end:d} };
+  }
+}
+
+function applySplitInput(el){
+  var id=el.id, v=el.value, map={spTrain:'train',spVal:'val',spTest:'test',spFolds:'folds',spWindow:'window',spGap:'gap'};
+  if(map[id]){ SP[map[id]]=v===''?null:Number(v); return; }
+  var m=id.match(/^sp_(train|validation|test)(Start|End)$/);
+  if(m){
+    SP.ranges=SP.ranges||{};
+    SP.ranges[m[1]]=SP.ranges[m[1]]||{start:'',end:''};
+    SP.ranges[m[1]][m[2]==='Start'?'start':'end']=v;
+  }
+}
+
+function toast(msg){
+  var t=$('toast'); t.textContent=msg; t.classList.add('on');
+  clearTimeout(toast._t); toast._t=setTimeout(function(){ t.classList.remove('on'); },1600);
+}
+
+/* 分界线：只切状态，不重绘 */
+function setMode(next){
+  if(MODE===next){ return false; }
+  MODE=next;
+  $('zones').setAttribute('data-focus',next);
+  /* 宽度过渡结束后，把两侧的关键列拉回可视区 */
+  setTimeout(function(){ revealTarget(); revealFeat(); },280);
+  return true;
+}
+
+function setTarget(k){
+  if(!canTarget(k)){ toast('该列不可作目标列'); return; }
+  if(k===ST.target){ return; }
+  ST.target=k;
+  ST.feats=ST.feats.filter(function(x){ return x!==k; });
+  render();
+  /* 定目标即展开目标侧，并把它滚进可视区 */
+  var moved=setMode('target');
+  setTimeout(revealTarget, moved?290:20);
+}
+
+/* 把列滚进所属区域可视区 */
+function revealIn(z,th){
+  if(!z||!th){ return; }
+  var zr=z.getBoundingClientRect(), tr=th.getBoundingClientRect();
+  if(tr.left<zr.left-1){ z.scrollLeft+=(tr.left-zr.left)-12; }
+  else if(tr.right>zr.right+1){ z.scrollLeft+=(tr.right-zr.right)+12; }
+}
+function revealTarget(){
+  var z=document.querySelector('.zone[data-zone="tgt"]');
+  revealIn(z,z.querySelector('th[data-key="'+ST.target+'"]'));
+}
+/* 特征区滚到首个已选特征 */
+function revealFeat(){
+  var z=document.querySelector('.zone[data-zone="feat"]');
+  var k=ST.feats[0]||featKeys()[0];
+  revealIn(z,k?z.querySelector('th[data-key="'+k+'"]'):null);
+}
+
+/* 框选（特征列）：按下拖出矩形，松开一次性落定；单击列头仍为单列切换 */
+var mq=null;
+function featThs(){ return [].slice.call(document.querySelectorAll('.zone[data-zone="feat"] thead tr:last-child th[data-key]')); }
+function colIdxAt(x,ths){
+  var i,r;
+  for(i=0;i<ths.length;i++){ r=ths[i].getBoundingClientRect(); if(x>=r.left&&x<r.right){ return i; } }
+  if(!ths.length){ return -1; }
+  if(x<ths[0].getBoundingClientRect().left){ return 0; }
+  return ths.length-1;
+}
+function mqRange(m){ return [Math.min(m.i0,m.i1),Math.max(m.i0,m.i1)]; }
+function mqMark(m,on){
+  document.querySelectorAll('.zone[data-zone="feat"] th.mq').forEach(function(x){ x.classList.remove('mq'); });
+  if(!on||!m){ return; }
+  var ths=featThs(), r=mqRange(m), i;
+  for(i=r[0];i<=r[1];i++){ if(ths[i]){ ths[i].classList.add('mq'); } }
+}
+function mqPaint(m,x,y){
+  if(!m.box){
+    m.box=document.createElement('div');
+    m.box.className='marq-box';
+    document.body.appendChild(m.box);
+  }
+  m.box.style.left=Math.min(m.x0,x)+'px';
+  m.box.style.top=Math.min(m.y0,y)+'px';
+  m.box.style.width=Math.abs(x-m.x0)+'px';
+  m.box.style.height=Math.abs(y-m.y0)+'px';
+}
+function mqCommit(m){
+  var ths=featThs(), keys=featKeys(), r=mqRange(m), list=[], next, x,k,p,all=true;
+  for(x=r[0];x<=r[1];x++){
+    k=ths[x]?ths[x].getAttribute('data-key'):null;
+    if(!k||keys.indexOf(k)<0){ continue; }
+    list.push(k);
+    if(!has(ST.feats,k)){ all=false; }
+  }
+  if(!list.length){ return; }
+  next=ST.feats.slice(0);
+  for(x=0;x<list.length;x++){
+    p=next.indexOf(list[x]);
+    if(p>-1){ next.splice(p,1); }
+    if(!all){ next.push(list[x]); }
+  }
+  ST.feats=next; render();
+}
+function toggleFeat(i){
+  var ths=featThs(), t=ths[i];
+  if(!t){ return; }
+  var k=t.getAttribute('data-key'), p=ST.feats.indexOf(k);
+  if(p>-1){ ST.feats.splice(p,1); } else { ST.feats.push(k); }
+  render();
+}
+
+document.addEventListener('mousedown',function(e){
+  var z=e.target.closest('.zone');
+  if(!z||e.target.closest('button')){ return; }
+  var zone=z.getAttribute('data-zone');
+  var th=e.target.closest('th[data-key]');
+
+  if(zone==='lock'){
+    if(th){ var lc=colOf(th.getAttribute('data-key')); toast(lc.t==='date'?'日期列用于定位记录，不可选':'标识列用于定位记录，不可选'); }
+    return;
+  }
+
+  /* 目标区：点任意位置 → 展开目标侧；点列头 → 同时设为目标 */
+  if(zone==='tgt'){
+    var moved=setMode('target');
+    if(th){
+      var tk=th.getAttribute('data-key');
+      if(tk!==ST.target){ setTarget(tk); }
+    }
+    if(!moved&&th){ revealTarget(); }
+    return;
+  }
+
+  /* 特征区：按下即准备框选，单击（未拖动）视为切换该列 */
+  setMode('feat');
+  if(e.target===z){ return; }   /* 空白区与滚动条不参与框选 */
+  var ths=featThs(), i=colIdxAt(e.clientX,ths);
+  if(i<0){ return; }
+  e.preventDefault();
+  mq={x0:e.clientX,y0:e.clientY,i0:i,i1:i,active:false,box:null,fromTh:!!th};
+});
+
+document.addEventListener('mousemove',function(e){
+  if(!mq){ return; }
+  if(!mq.active){
+    if(Math.abs(e.clientX-mq.x0)<4&&Math.abs(e.clientY-mq.y0)<4){ return; }
+    mq.active=true;
+    document.body.classList.add('mqing');
+  }
+  mq.i1=colIdxAt(e.clientX,featThs());
+  mqPaint(mq,e.clientX,e.clientY);
+  mqMark(mq,true);
+});
+
+document.addEventListener('mouseup',function(){
+  if(!mq){ return; }
+  var m=mq;
+  mq=null;
+  document.body.classList.remove('mqing');
+  if(m.box&&m.box.parentNode){ m.box.parentNode.removeChild(m.box); }
+  mqMark(m,false);
+  if(m.active){ mqCommit(m); }
+  else if(m.fromTh){ toggleFeat(m.i0); }
+});
+
+/* 行悬停跨区联动 */
+document.addEventListener('mouseover',function(e){
+  var tr=e.target.closest('.ptable tbody tr[data-r]');
+  if(!tr||(mq&&mq.active)){ return; }
+  var r=tr.getAttribute('data-r');
+  document.querySelectorAll('.ptable tbody tr.hl').forEach(function(x){ x.classList.remove('hl'); });
+  document.querySelectorAll('.ptable tbody tr[data-r="'+r+'"]').forEach(function(x){ x.classList.add('hl'); });
+});
+
+/* 纵向同步 */
+(function(){
+  var zones=[].slice.call(document.querySelectorAll('.zone')), lock=false;
+  zones.forEach(function(z){
+    z.addEventListener('scroll',function(){
+      if(lock){ return; }
+      lock=true;
+      zones.forEach(function(o){ if(o!==z){ o.scrollTop=z.scrollTop; } });
+      lock=false;
+    });
+  });
+})();
+
+document.addEventListener('click',function(e){
+  var rm=e.target.closest('[data-rm]');
+  if(rm){
+    var rk=rm.getAttribute('data-rm');
+    ST.feats=ST.feats.filter(function(x){ return x!==rk; });
+    render();
+    return;
+  }
+  var sp=e.target.closest('[data-split="reset"]');
+  if(sp){
+    SP=splitDefaults();
+    renderSplit();
+    return;
+  }
+  var bk=e.target.closest('[data-bulk]');
+  if(bk){
+    var how=bk.getAttribute('data-bulk'), pool=poolKeys();
+    if(how==='all'){ ST.feats=pool.slice(0); }
+    else if(how==='none'){ ST.feats=[]; }
+    else{ ST.feats=pool.filter(function(k){ return !has(ST.feats,k); }); }
+    render();
+    return;
+  }
+  var mb=e.target.closest('.mode button');
+  if(mb){
+    var next=mb.getAttribute('data-mode');
+    if(!setMode(next)){
+      /* 该侧已展开：只把关键列拉回可视区 */
+      if(next==='target'){ revealTarget(); } else { revealFeat(); }
+    }
+    return;
+  }
+  var chip=e.target.closest('.chip[data-goto]');
+  if(chip){
+    var k=chip.getAttribute('data-goto');
+    var th=document.querySelector('.zone th[data-key="'+k+'"]');
+    if(!th){ return; }
+    var z=th.closest('.zone');
+    var zr=z.getBoundingClientRect(), tr=th.getBoundingClientRect();
+    z.scrollLeft+=tr.left-zr.left-12;
+    return;
+  }
+});
+
+document.addEventListener('change',function(e){
+  var el=e.target;
+  if(el.id==='pgSize'){ PG.size=Number(el.value); PG.page=1; render(); return; }
+  if(el.id==='dsMode'){
+    if(el.value==='dates'&&!SP.ranges){ syncRangeFromRatio(); }
+    SP.mode=el.value; renderSplit(); return;
+  }
+  if(el.id==='dsMethod'){ SP.method=el.value; renderSplit(); return; }
+});
+
+document.addEventListener('input',function(e){
+  var el=e.target;
+  if(el.getAttribute&&el.getAttribute('data-sp')==='1'){ applySplitInput(el); refreshSplit(); }
+});
+
+render();
+})();
+</script>
+</body>
+</html>

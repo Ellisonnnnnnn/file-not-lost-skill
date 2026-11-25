@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="rE6KVnyriPY6i0Tz6qWNVu">
+<head data-page-node-id="kblzFMfy88NJNgt5uGFN3o">
+<meta charset="UTF-8" data-page-node-id="aRMXBkYgCEdddzJd2MUBHA">
+<meta name="viewport" content="width=device-width, initial-scale=1" data-page-node-id="CzzYdaZBTWicOjFXNLIkxV">
+<title>确认预测条件 · 信息精简方案</title>
+<style>
+:root{
+  --blue:#0081FF; --blue-bg:#E9F3FF; --blue-line:#B9D8FF; --blue-dark:#0073E6;
+  --n8:#303133; --n7:#4B5563; --n6:#909399; --n5:#737985;
+  --line:#DCDFE6; --line-2:#EBEEF5; --bg:#EDF0F5;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;}
+body{
+  background:var(--bg);
+  font:14px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  color:var(--n8);
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1000px;margin:0 auto;padding:28px 24px 64px;}
+
+/* ---------- 页头 ---------- */
+.head h1{margin:0 0 6px;font-size:20px;font-weight:600;letter-spacing:.2px;}
+.head p{margin:0;color:var(--n5);font-size:13px;line-height:1.8;}
+.diag{margin:16px 0 20px;padding:14px 16px;background:#fff;border:1px solid var(--line-2);border-radius:8px;}
+.diag>b{display:block;font-size:12.5px;color:var(--n7);margin-bottom:8px;}
+.diag ol{margin:0;padding-left:18px;color:var(--n5);font-size:12.5px;line-height:1.95;}
+.diag code{font:11.5px/1 Consolas,Monaco,monospace;background:#F2F4F7;padding:1px 4px;border-radius:3px;color:var(--n7);}
+
+/* ---------- tabs ---------- */
+.tabs{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;}
+.tabs button{
+  font:13px/1 inherit;font-family:inherit;padding:9px 14px;border-radius:6px;border:1px solid var(--line);
+  background:#fff;color:var(--n7);cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:.15s;
+}
+.tabs button b{font-weight:600;color:var(--n6);font-size:12px;}
+.tabs button:hover{border-color:#AFB8C6;}
+.tabs button.on{background:var(--blue);border-color:var(--blue);color:#fff;}
+.tabs button.on b{color:rgba(255,255,255,.75);}
+.tabs button .pick-tag{font-style:normal;font-size:11px;line-height:16px;padding:0 5px;border-radius:3px;background:rgba(255,255,255,.22);color:#fff;}
+.tabs button:not(.on) .pick-tag{background:#EAF3FF;color:#0081FF;}
+
+.pane{display:none;}
+.pane.on{display:block;}
+.pane-head{display:flex;align-items:baseline;gap:10px;margin-bottom:12px;flex-wrap:wrap;}
+.pane-head b{font-size:15px;font-weight:600;}
+.pane-head span{font-size:12.5px;color:var(--n6);}
+.pane-head .stat{margin-left:auto;font-size:12px;color:var(--n6);}
+.pane-head .stat i{font-style:normal;color:var(--blue);font-weight:600;}
+
+/* ---------- 舞台 ---------- */
+.stage{
+  padding:26px 0;border-radius:10px;background:#F1F3F8;
+  background-image:radial-gradient(#DFE3EB 1px, transparent 1px);
+  background-size:14px 14px;
+  display:flex;justify-content:center;
+}
+
+/* ---------- 卡片（对齐主稿尺寸 772px） ---------- */
+.card{
+  width:772px;max-width:100%;background:#fff;border:1px solid var(--line);border-radius:4px;
+  box-shadow:0 2px 10px rgba(31,38,48,.06);
+}
+.c-head{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line-2);}
+.c-head b{font-size:15px;font-weight:600;letter-spacing:.2px;}
+.link{
+  border:0;background:none;padding:0;font:12px/1.4 inherit;font-family:inherit;
+  color:var(--blue);cursor:pointer;display:inline-flex;align-items:center;gap:4px;
+}
+.link:hover{text-decoration:underline;}
+.c-head .link{margin-left:auto;flex:none;}
+.c-head .seg{margin-left:auto;}
+.c-body{padding:16px;}
+.c-foot{display:flex;align-items:center;gap:10px;padding:12px 16px;border-top:1px solid var(--line-2);}
+.c-foot .sum{font-size:12px;color:var(--n5);min-width:0;}
+.c-foot .acts{margin-left:auto;display:flex;gap:8px;flex:none;}
+
+/* ---------- 按钮 ---------- */
+.btn{height:32px;padding:0 16px;border-radius:4px;border:1px solid var(--line);background:#fff;color:var(--n7);
+  font:13px/1 inherit;font-family:inherit;cursor:pointer;white-space:nowrap;transition:.15s;}
+.btn:hover{border-color:#AFB8C6;color:var(--n8);}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff;}
+.btn.primary:hover{background:var(--blue-dark);border-color:var(--blue-dark);color:#fff;}
+.btn.ghost{color:var(--blue);border-color:var(--blue-line);}
+.btn.ghost:hover{background:var(--blue-bg);}
+
+/* ---------- 分段控件 ---------- */
+.seg{display:inline-flex;padding:2px;background:#F2F4F7;border-radius:5px;gap:2px;}
+.seg button{
+  height:26px;padding:0 12px;border:0;border-radius:4px;background:none;color:var(--n6);
+  font:12.5px/1 inherit;font-family:inherit;cursor:pointer;white-space:nowrap;transition:.15s;
+}
+.seg button:hover{color:var(--n8);}
+.seg button.on{background:#fff;color:var(--blue);font-weight:500;box-shadow:0 1px 3px rgba(31,38,48,.10);}
+
+/* ---------- 字段 ---------- */
+.mode-row{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
+.mode-row>.mlabel{font-size:13px;color:var(--n8);flex:none;}
+
+.f{display:flex;flex-direction:column;gap:6px;min-width:0;}
+.f>label{font-size:13px;color:var(--n8);display:flex;align-items:center;gap:5px;min-height:20px;}
+.f>label .opt{font-size:12px;color:var(--n6);font-weight:400;}
+.ctl{position:relative;display:flex;align-items:center;min-width:0;}
+.ctl select,.ctl input{
+  width:100%;height:32px;border:1px solid var(--line);border-radius:4px;background:#fff;
+  font:13px/1 inherit;font-family:inherit;color:var(--n8);padding:0 30px 0 11px;outline:0;min-width:0;
+}
+.ctl input{padding-right:11px;}
+.ctl input::placeholder{color:#C0C4CC;}
+.ctl select{appearance:none;-webkit-appearance:none;cursor:pointer;}
+.ctl select:hover,.ctl input:hover{border-color:#C0C4CC;}
+.ctl select:focus,.ctl input:focus{border-color:var(--blue);box-shadow:0 0 0 2px var(--blue-bg);}
+.ctl .caret{position:absolute;right:10px;pointer-events:none;color:var(--n6);display:block;}
+.ctl .unit{position:absolute;right:11px;font-size:12px;color:var(--n6);pointer-events:none;}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px 20px;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px 16px;}
+.hint{font-size:12px;line-height:1.6;color:var(--n6);margin:0;}
+.ctl.range{gap:6px;}
+.ctl.range input{flex:1;min-width:0;width:auto;}
+.ctl.range .arrow{flex:none;color:#C0C4CC;font-size:12px;}
+.combo{position:relative;display:flex;align-items:center;height:32px;border:1px solid var(--line);border-radius:4px;background:#fff;}
+.combo:hover{border-color:#C0C4CC;}
+.combo:focus-within{border-color:var(--blue);box-shadow:0 0 0 2px var(--blue-bg);}
+.combo input{border:0;height:30px;width:44px;padding:0 0 0 11px;font:13px/1 inherit;font-family:inherit;color:var(--n8);outline:0;background:none;}
+.combo .u{font-size:12px;color:var(--n6);padding-right:10px;flex:none;}
+.combo .bar{width:1px;height:16px;background:var(--line-2);flex:none;}
+.combo select{border:0;height:30px;flex:1;min-width:0;appearance:none;-webkit-appearance:none;background:none;padding:0 26px 0 10px;font:13px/1 inherit;font-family:inherit;color:var(--n8);outline:0;cursor:pointer;}
+.combo .caret{position:absolute;right:9px;}
+
+/* ⓘ 提示 */
+.inf{
+  position:relative;display:inline-flex;align-items:center;justify-content:center;
+  width:14px;height:14px;border-radius:50%;border:1px solid #C0C4CC;color:var(--n6);
+  font:10px/1 Georgia,serif;cursor:help;flex:none;font-style:normal;
+}
+.inf:hover{border-color:var(--blue);color:var(--blue);}
+.inf .tip{
+  display:none;position:absolute;left:-6px;top:20px;z-index:20;width:250px;padding:8px 10px;
+  background:#303133;color:#fff;font:12px/1.7 inherit;border-radius:4px;
+  box-shadow:0 8px 20px rgba(31,35,41,.2);text-align:left;font-weight:400;
+}
+.inf:hover .tip,.inf:focus .tip{display:block;}
+.inf.up .tip{top:auto;bottom:22px;}
+
+/* ---------- 分组标题 ---------- */
+.grp{display:flex;align-items:center;gap:7px;margin:0 0 10px;font-size:12px;color:var(--n5);letter-spacing:.2px;}
+.grp:before{content:"";width:3px;height:12px;border-radius:2px;background:var(--blue);flex:none;}
+.grp .gnote{margin-left:2px;color:#A8B0BE;font-size:11.5px;letter-spacing:0;padding:0;border:0;background:none;}
+.sec+.sec{margin-top:18px;padding-top:18px;border-top:1px dashed var(--line-2);}
+
+/* ---------- 折叠 ---------- */
+.more{margin-top:18px;border-top:1px dashed var(--line-2);padding-top:18px;}
+.more>summary{font-size:12px;color:#606266;cursor:pointer;outline:0;list-style:none;display:flex;align-items:center;gap:5px;}
+.more>summary::-webkit-details-marker{display:none;}
+.more>summary:before{content:"";width:0;height:0;border-left:4px solid #909399;border-top:3.5px solid transparent;border-bottom:3.5px solid transparent;transition:transform .15s;}
+.more[open]>summary:before{transform:rotate(90deg);}
+.more>summary:hover{color:#303133;}
+.more-bd{margin-top:12px;}
+
+/* ---------- 方案 B 摘要块 ---------- */
+.sumcard{position:relative;padding:14px 16px;background:#FAFBFD;border:1px solid var(--line-2);border-radius:6px;}
+.sum-edit{position:absolute;right:12px;top:10px;z-index:2;}
+.sumcard .srow{padding-right:76px;}
+.sumcard .srow{display:flex;gap:10px;font-size:13px;line-height:1.9;align-items:baseline;}
+.sumcard .srow+.srow{margin-top:4px;}
+.sumcard .k{width:70px;flex:none;color:var(--n6);font-size:12px;}
+.sumcard .v{color:var(--n8);}
+.sumcard .v em{font-style:normal;color:var(--n6);}
+.sumcard .v b{font-weight:600;}
+.b-edit{display:flex;align-items:center;gap:10px;margin:0 0 14px;}
+.b-edit .line{flex:1;height:1px;background:var(--line-2);}
+
+/* ---------- 方案 D 决策卡 ---------- */
+.dcards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.dcard{padding:12px;border:1px solid var(--line);border-radius:6px;background:#fff;transition:.15s;}
+.dcard:focus-within{border-color:var(--blue);box-shadow:0 0 0 2px var(--blue-bg);}
+.dcard .dh{font-size:12px;color:var(--n6);margin-bottom:7px;}
+.dcard .dhx{margin-left:4px;color:#B0B6C0;font-size:11.5px;}
+.dsel{position:relative;display:flex;align-items:center;}
+.dsel select{
+  width:100%;height:26px;border:0;padding:0 18px 0 0;background:none;appearance:none;-webkit-appearance:none;
+  font:15px/1.4 inherit;font-family:inherit;font-weight:600;color:var(--n8);outline:0;cursor:pointer;min-width:0;
+}
+.dsel select:hover{color:var(--blue);}
+.dsel .caret{position:absolute;right:0;color:var(--n6);}
+.chips{display:flex;gap:6px;margin-top:2px;flex-wrap:wrap;}
+.chips button{
+  height:26px;padding:0 9px;border:1px solid var(--line);border-radius:13px;background:#fff;
+  font:12.5px/1 inherit;font-family:inherit;color:var(--n7);cursor:pointer;transition:.15s;flex:none;
+}
+.chips button:hover{border-color:var(--blue-line);color:var(--blue);}
+.chips button.on{background:var(--blue-bg);border-color:var(--blue);color:var(--blue);font-weight:500;}
+.defrow{
+  display:flex;align-items:center;gap:8px;margin-top:14px;padding:10px 12px;border-radius:4px;
+  background:#FAFBFD;border:1px solid var(--line-2);font-size:12.5px;color:var(--n5);line-height:1.7;
+}
+.defrow .grow{flex:1;}
+.defrow button{margin-left:auto;border:0;background:none;padding:0;font:12.5px/1 inherit;font-family:inherit;color:var(--blue);cursor:pointer;flex:none;}
+.defrow button:hover{text-decoration:underline;}
+
+/* ---------- 说明区 ---------- */
+.notes{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;}
+.note{padding:14px 16px;background:#fff;border:1px solid var(--line-2);border-radius:8px;}
+.note>b{display:block;font-size:12.5px;color:var(--n7);margin-bottom:7px;}
+.note ul{margin:0;padding-left:16px;color:var(--n5);font-size:12.5px;line-height:1.9;}
+.note ul li::marker{color:#C0C4CC;}
+.note.warn{background:#FFFDF7;border-color:#F5E6C8;}
+.note.warn>b{color:#B8741A;}
+.note.warn ul li::marker{color:#E0C48C;}
+
+/* ---------- 尾部建议 ---------- */
+.tail{margin-top:24px;padding:16px 18px;background:#fff;border:1px solid var(--line-2);border-left:3px solid var(--blue);border-radius:8px;}
+.tail .h{display:block;font-size:13px;font-weight:600;margin-bottom:6px;}
+.tail p b{font-weight:600;color:var(--n8);}
+.tail p{margin:0;font-size:12.5px;line-height:1.95;color:var(--n5);}
+.tail p+p{margin-top:6px;}
+
+/* ---------- 轻提示 ---------- */
+.toast{
+  position:fixed;left:50%;bottom:36px;transform:translate(-50%,10px);z-index:99;
+  padding:8px 16px;background:rgba(48,49,51,.9);color:#fff;font-size:12.5px;border-radius:4px;
+  opacity:0;transition:.22s;pointer-events:none;white-space:nowrap;
+}
+.toast.on{opacity:1;transform:translate(-50%,0);}
+
+@media (max-width:820px){
+  .grid3,.dcards{grid-template-columns:1fr 1fr;}
+  .notes{grid-template-columns:1fr;}
+}
+</style>
+<style id="boe-controls">
+.boe-scope{
+  --color-primary-default:#0081FF;
+  --color-primary-hover:#2E98FF;
+  --color-primary-active:#0070DE;
+  --color-primary-bg:#E6F2FF;
+  --color-blue-2:#E6F2FF;
+  --color-text-primary:#303133;
+  --color-text-secondary:#606266;
+  --color-text-tertiary:#909399;
+  --color-text-placeholder:#C0C4CC;
+  --color-text-disabled:#C0C4CC;
+  --color-neutral-white:#FFFFFF;
+  --color-bg-page:#FFFFFF;
+  --color-bg-container:#F5F7FA;
+  --color-border-base:#E1E4EB;
+  --color-border-light:#D7DAE0;
+  --color-border-strong:#C0C4CC;
+  --color-error-default:#F56C6C;
+  --color-error-bg:#FEF0F0;
+  --color-success-default:#67C23A;
+  --color-success-bg:#F0F9EB;
+  --radius-control:4px;
+  --radius-full:999px;
+  --font-family-base:"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Helvetica Neue",Arial,sans-serif;
+  --font-weight-regular:400;
+  --font-weight-medium:500;
+  --font-size-t08:14px;
+  --font-size-t09:12px;
+  --line-height-t09:20px;
+  --shadow-popup:0 -2px 8px rgba(0,0,0,.02),0 8px 14px 2px rgba(0,0,0,.06),0 5px 5px -3px rgba(0,0,0,.05);
+  --shadow-elevation-0:0 1px 2px rgba(0,0,0,.04);
+  --boe-component-input-number-accent:#0081FF;
+}
+.list-page .boe-filter-area__field .boe-input-wrap,
+.list-page .boe-filter-area__field .boe-select{ flex: 1 1 auto; width: 100%; min-width: 0; }
+.list-page .boe-filter-area__field .boe-select-trigger{ width: 100%; height: 32px; font: 14px var(--font-family-base); }
+.boe-select{ position: relative; width: 240px; max-width: 100%; font-size: 14px; color: var(--boe-component-select-text-default,var(--color-text-primary)); }
+.boe-select-trigger{ box-sizing: border-box; width: 100%; min-height: var(--boe-component-select-height,32px); display: flex; align-items: center; gap: 6px; padding: 5px 12px; background: var(--boe-component-select-background-default,var(--color-bg-page)); border: 1px solid var(--boe-component-select-border-default,var(--color-border-light)); border-radius: var(--radius-control); cursor: pointer; outline: 0; transition: border-color 100ms ease-in,box-shadow 100ms ease-in; }
+.boe-select-trigger:hover{ border-color: var(--boe-component-select-border-active,var(--color-primary-default)); }
+.boe-select.is-open .boe-select-trigger,
+.boe-select-trigger:focus-visible{ border-color: var(--boe-component-select-border-active,var(--color-primary-default)); box-shadow: none; }
+.boe-select-value{ overflow: hidden; flex: 1; color: var(--boe-component-select-text-default,var(--color-text-primary)); line-height: 20px; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+.list-page .boe-select-placeholder{ color: var(--boe-component-select-text-placeholder,var(--color-text-placeholder)); }
+.boe-select-arrow{ display: inline-flex; flex: 0 0 16px; align-items: center; justify-content: center; color: var(--color-text-tertiary); }
+.boe-select.is-open .boe-select-arrow .boe-control-chevron-down{ transform: rotate(180deg); }
+.boe-select-dropdown{ position: absolute; z-index: 30; top: calc(100% + 4px); left: 0; width: 100%; box-sizing: border-box; display: none; padding: 6px; background: var(--color-bg-page); border-radius: var(--radius-control); box-shadow: var(--shadow-popup); }
+.boe-select.is-open .boe-select-dropdown{ display: block; }
+.boe-select-options{ max-height: 224px; overflow: auto; }
+.boe-select-option{ position: relative; min-height: 28px; box-sizing: border-box; display: flex; align-items: center; padding: 2px 28px 2px 6px; border-radius: var(--radius-control); color: var(--color-text-primary); line-height: 24px; cursor: pointer; }
+.boe-select-option:hover,
+.boe-select-option.is-hover{ background: var(--color-primary-bg); }
+.boe-select-option:focus-visible{ outline: 2px solid var(--color-primary-default); outline-offset: -2px; }
+.boe-select-option.is-selected{ color: var(--color-text-primary); }
+.boe-select-option-check{ position: absolute; top: 7px; right: 8px; width: 14px; height: 14px; color: var(--color-primary-default); }
+.boe-select-option-check .boe-control-icon{ width: 14px; height: 14px; }
+.boe-control-icon{ width: 16px; height: 16px; display: block; flex: 0 0 auto; transform-origin: 50% 50%; }
+.picker-module-details[data-picker-module="date-picker"] .boe-control-suffix{
+  position: absolute;
+  inset-block: 0;
+  right: 0;
+  width: 32px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-tertiary);
+  line-height: 0;
+}
+.picker-module-details[data-picker-module="date-picker"] .boe-control-suffix--passive{ pointer-events: none; }
+.picker-module-details[data-picker-module="date-picker"] .boe-control-icon{ width: 16px; height: 16px; display: block; flex: 0 0 auto; transform-origin: 50% 50%; }
+.picker-module-details[data-picker-module="date-picker"] .boe-control-chevron-down{ transition: transform 150ms ease; }
+@media (prefers-reduced-motion: reduce){.picker-module-details[data-picker-module="date-picker"] .boe-control-chevron-down{ transition: none; }}
+.picker-module-details[data-picker-module="date-picker"] .boe-date-picker{ position: relative; width: 240px; color: var(--boe-component-date-picker-text-default, var(--color-text-primary)); font-size: 14px; }
+.picker-module-details[data-picker-module="date-picker"] .boe-date-trigger{ position: relative; width: 100%; height: var(--boe-component-date-picker-height-default, 32px); display: flex; align-items: center; padding: 0 34px 0 12px; border: 1px solid var(--boe-component-date-picker-border-default, var(--color-border-light)); border-radius: var(--radius-control); outline: 0; background: var(--boe-component-date-picker-background-default, var(--color-bg-page)); color: var(--boe-component-date-picker-text-default, var(--color-text-primary)); font: inherit; text-align: left; cursor: pointer; transition: border-color 100ms ease-in, box-shadow 100ms ease-in; }
+.picker-module-details[data-picker-module="date-picker"] .boe-date-trigger:hover{ border-color: var(--boe-component-date-picker-border-active, var(--color-primary-default)); }
+.picker-module-details[data-picker-module="date-picker"] .boe-date-trigger:focus-visible, .picker-module-details[data-picker-module="date-picker"] .boe-date-picker.is-open .boe-date-trigger{ border-color: var(--boe-component-date-picker-border-active, var(--color-primary-default)); box-shadow: 0 0 0 2px var(--color-primary-bg); }
+.picker-module-details[data-picker-module="date-picker"] .boe-date-value{ min-width: 0; overflow: hidden; flex: 1; line-height: 20px; text-overflow: ellipsis; white-space: nowrap; }
+.picker-module-details[data-picker-module="date-picker"] .boe-date-calendar{ color: var(--color-text-tertiary); }
+.picker-module-details[data-picker-module="date-picker"] .boe-control-calendar{ fill: none; stroke: currentColor; stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; }
+.picker-module-details[data-picker-module="date-picker"] .boe-date-picker.has-value:hover .boe-date-calendar{ display: none; }
+.picker-module-details[data-picker-module="date-picker"] .boe-date-picker.has-value:hover .boe-date-clear{ display: grid; }
+.picker-module-details[data-picker-module="date-picker"] .boe-date-panel{ position: absolute; z-index: 30; top: calc(100% + 4px); left: 0; width: 296px; display: none; padding: 12px; border-radius: var(--radius-control); background: var(--color-bg-page); box-shadow: var(--shadow-popup); }
+.picker-module-details[data-picker-module="date-picker"] .boe-date-picker.is-open .boe-date-panel{ display: block; }
+.picker-module-details[data-picker-module="date-picker"] .boe-date-panel-header{ height: 32px; display: grid; grid-template-columns: 28px 1fr 28px; align-items: center; margin-bottom: 8px; }
+.picker-module-details[data-picker-module="date-picker"] .boe-date-nav{ width: 28px; height: 28px; display: grid; place-items: center; padding: 0; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--color-text-tertiary); cursor: pointer; }
+.picker-module-details[data-picker-module="date-picker"] .boe-date-nav:hover, .picker-module-details[data-picker-module="date-picker"] .boe-date-nav:focus-visible{ outline: 0; background: var(--color-bg-container); color: var(--color-primary-default); }
+.picker-module-details[data-picker-module="date-picker"] .boe-date-nav svg{ width: 16px; height: 16px; }
+.picker-module-details[data-picker-module="date-picker"] .boe-date-prev svg{ transform: rotate(180deg); }
+.picker-module-details[data-picker-module="date-picker"] .boe-date-title{ color: var(--color-text-primary); font-weight: var(--font-weight-medium); text-align: center; }
+.picker-module-details[data-picker-module="date-picker"] .boe-date-week, .picker-module-details[data-picker-module="date-picker"] .boe-date-grid{ display: grid; grid-template-columns: repeat(7,32px); justify-content: space-between; }
+.picker-module-details[data-picker-module="date-picker"] .boe-date-week span{ height: 28px; display: grid; place-items: center; color: var(--color-text-tertiary); font-size: var(--font-size-t09); }
+.picker-module-details[data-picker-module="date-picker"] .boe-date-cell{ position: relative; width: 32px; height: 32px; display: grid; place-items: center; padding: 0; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--color-text-primary); font: inherit; cursor: pointer; }
+.picker-module-details[data-picker-module="date-picker"] .boe-date-panel-footer{ min-height: 36px; display: flex; align-items: flex-end; justify-content: space-between; margin: 8px -12px -12px; padding: 8px 12px; border-top: 1px solid var(--color-border-base); }
+.picker-module-details[data-picker-module="date-picker"] .boe-date-link{ padding: 0; border: 0; background: transparent; color: var(--color-primary-default); font: inherit; cursor: pointer; }
+.input-number-module-details .input-number-component-token-scope{
+  font-family: var(--font-family-base);
+  font-weight: var(--font-weight-regular);
+}
+.input-number-module-details .boe-input-number{
+  position: relative;
+  width: 184px;
+  height: 32px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 25px;
+  overflow: hidden;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-control);
+  background: var(--color-bg-page);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-elevation-0);
+  transition: border-color 100ms ease-in, box-shadow 100ms ease-in;
+}
+.input-number-module-details .boe-input-number-input{
+  width: 100%;
+  min-width: 0;
+  height: 30px;
+  padding: 0 12px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 14px;
+  line-height: var(--line-height-t09);
+  text-align: left;
+}
+.input-number-module-details .boe-input-number-input::-webkit-inner-spin-button, .input-number-module-details .boe-input-number-input::-webkit-outer-spin-button{ margin: 0; appearance: none; }
+.input-number-module-details .boe-input-number-input{ appearance: textfield; }
+.input-number-module-details .boe-input-number-actions{ display: grid; grid-template-rows: 1fr 1fr; border-left: 1px solid var(--color-border-light); background: var(--color-bg-container); }
+.input-number-module-details .boe-input-number-button{ width: 24px; min-height: 0; display: grid; place-items: center; padding: 0; border: 0; background: transparent; color: var(--color-text-tertiary); cursor: pointer; line-height: 1; }
+.input-number-module-details .boe-input-number-icon{ width: 12px; height: 12px; display: block; }
+.input-number-module-details .boe-input-number-up .boe-input-number-icon{ transform: rotate(180deg); }
+.input-number-module-details .boe-input-number-input::placeholder{ color: var(--color-text-placeholder); }
+/* 按钮交互态（组件库原值，主稿抽样式时漏了这几条） */
+.input-number-module-details .boe-input-number-button:hover:not(:disabled),
+.input-number-module-details .boe-input-number-button:focus-visible:not(:disabled){ outline: 0; background: var(--color-primary-bg); color: var(--color-primary-default); }
+.input-number-module-details .boe-input-number-button:active:not(:disabled){ background: var(--color-blue-2); color: var(--color-primary-active); }
+.input-number-module-details .boe-input-number-button:disabled{ color: var(--color-text-disabled); cursor: not-allowed; }
+/* 左右样式（compact）：左减 右加，数值居中 */
+.input-number-module-details .boe-input-number--compact{ grid-template-columns: 30px minmax(0, 1fr) 30px; }
+.input-number-module-details .boe-input-number--compact .boe-input-number-input{ padding: 0 8px; text-align: center; }
+.input-number-module-details .boe-input-number--compact > .boe-input-number-button{ width: 30px; height: 30px; background: var(--color-bg-container); }
+.input-number-module-details .boe-input-number--compact > .boe-input-number-button:first-child{ border-right: 1px solid var(--color-border-light); }
+.input-number-module-details .boe-input-number--compact > .boe-input-number-button:last-child{ border-left: 1px solid var(--color-border-light); }
+.input-number-module-details .boe-input-number--compact > .boe-input-number-button:hover:not(:disabled),
+.input-number-module-details .boe-input-number--compact > .boe-input-number-button:focus-visible:not(:disabled){ background: var(--color-primary-bg); }
+@media (prefers-reduced-motion: reduce){.input-number-module-details .boe-input-number{ transition: none; }}
+
+/* ---------- 方案 C 里用到的 BOE 控件排版（只排外壳，不改组件视觉） ---------- */
+.boe-scope .boe-field{display:flex;flex-direction:column;min-width:0;}
+.boe-scope .boe-pair{display:grid;gap:6px;align-items:center;}
+.boe-scope .boe-pair.dates{grid-template-columns:minmax(0,1fr) 12px minmax(0,1fr);}
+.boe-scope .boe-pair.hz{grid-template-columns:104px minmax(0,1fr);}
+.boe-scope .boe-pair .arrow{color:#C0C4CC;font-size:12px;text-align:center;}
+.boe-scope .boe-select,.boe-scope .boe-date-picker,.boe-scope .boe-input-number{width:100%;}
+/* 日期单元格交互态：主稿这一版缺这几条（组件库有），此处按组件库原值补上 */
+.picker-module-details[data-picker-module="date-picker"] .boe-date-cell:hover:not(:disabled){background:var(--color-bg-container);color:var(--color-primary-default);}
+.picker-module-details[data-picker-module="date-picker"] .boe-date-cell.is-today{color:var(--color-primary-default);font-weight:var(--font-weight-medium);}
+.picker-module-details[data-picker-module="date-picker"] .boe-date-cell.is-selected{background:var(--color-primary-default);color:#fff;font-weight:var(--font-weight-medium);}
+.picker-module-details[data-picker-module="date-picker"] .boe-date-cell.is-selected:hover{background:var(--color-primary-hover);color:#fff;}
+
+</style>
+</head>
+<body data-page-node-id="R1HqRy6GCtxF4mw1ACib7h">
+<svg id="boe-control-icon-sprite" xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true" focusable="false"><symbol id="boe-icon-caret-down-small" viewBox="0 0 16 16"><path d="M5.25 6.25 8 9l2.75-2.75" fill="none" stroke="currentColor" stroke-opacity=".9" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></symbol><symbol id="boe-icon-caret-right-small" viewBox="0 0 16 16"><polygon fill="currentColor" fill-opacity=".9" points="6 5 10.5 8 6 11"/></symbol><symbol id="boe-icon-calendar" viewBox="0 0 16 16"><rect x="2.25" y="3.25" width="11.5" height="10.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M5 1.75v3M11 1.75v3M2.5 6.25h11M5 8.75h1M8 8.75h1M11 8.75h1M5 11.25h1M8 11.25h1" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></symbol><symbol id="boe-icon-check" viewBox="0 0 16 16"><path fill="currentColor" fill-opacity=".9" d="M6.64237 11.5151 3 7.87281l.6743-.6743 2.96807 2.96807 5.68149-5.68149.67614.67246z"/></symbol><symbol id="boe-icon-plus-small" viewBox="0 0 16 16"><path d="M8 3.5v9M3.5 8h9" fill="none" stroke="currentColor" stroke-opacity=".9" stroke-width="1.25" stroke-linecap="round"/></symbol><symbol id="boe-icon-minus-small" viewBox="0 0 16 16"><path d="M3.5 8h9" fill="none" stroke="currentColor" stroke-opacity=".9" stroke-width="1.25" stroke-linecap="round"/></symbol></svg>
+<div class="wrap" data-page-node-id="AhJNC3erAzR975n3G9wL4q">
+
+  <div class="head" data-page-node-id="yd3CTuYv0WdnGO4FP5IN4x">
+    <h1 data-page-node-id="8xCiok8FvrwWNKs1UHevuS">「确认预测条件」卡片 · 四版信息精简方案</h1>
+    <p data-page-node-id="xXHFQPUKKRTA6rQp8JMQYz">同一张卡片、同一组默认值，只改信息层级与控件组织。四个方案都保留全部可填项，区别在于「哪些先说、哪些收起来、哪些不再重复一遍」。</p>
+  </div>
+
+  <div class="diag" data-page-node-id="yQdnKVEFTvzz9FG4cJ3goS">
+    <b data-page-node-id="eBZk7wlx3LyDsAfX6XEsBI">现在这张卡片为什么显得乱（实测 772 × 818px，其中 200px 是重复信息）</b>
+    <ol data-page-node-id="1Lg2k1Qyw1MMbDVKQ4Mz0x">
+      <li data-page-node-id="m3NozyF7XW09dJn8ZSxC24">顶部蓝提示条 <code data-page-node-id="EKfAFrGMAYeKPQ3oOKbtOJ">95px</code> 说「不确定怎么填？每项旁边 ⓘ 有例子。第一次可先预测 7 天」，可下面默认值本来就是 7 天 / 90%，那行「采用推荐预测设置」点下去等于什么都没变。</li>
+      <li data-page-node-id="eb1p7UEoGhxvTvK3i53vxH">七个字段各挂一个 <code data-page-node-id="VpFju4CFu3sb28f7kLrBVd">ⓘ</code>，740px 宽里出现七次同形状小圆点，形成视觉噪声，真正需要解释的只有三个。</li>
+      <li data-page-node-id="IN1VVpmC5lz4Zn6MJsPdm0">「指标口径 SUM(QTY, GRADE ∈ [A,T,Q])」独占 <code data-page-node-id="lrxp1kjQ2hVQjY845Ml0nJ">42px</code> 蓝底条，它是数据源的派生信息，却被抬成和预测指标同级的一块。</li>
+      <li data-page-node-id="Kd4QRWPOHLQGdAwwk6TRXx">底部确认语句 <code data-page-node-id="lPRzgSLD4oBCA67kBENTnT">63px</code>，把上面刚填的起止日期、指标名、天数原样再念一遍。</li>
+      <li data-page-node-id="tNFpL5ARSIvhHaPY5E8JB2">七项排四行，最后一行只有左边「关注线」一格，右边留白；「预测未来」和「预测区间」本是同一件事（怎么预测），被拆成两个并列字段。</li>
+      <li data-page-node-id="6Vt8LFQQuwGcgN2o5JZxP9">「本轮分析数据」切换和「数据源与口径版本」下拉是两级选择，中间没有层级提示，看起来像两个无关的控件。</li>
+    </ol>
+  </div>
+
+  <div class="tabs" data-page-node-id="3DhGzoI4qmcH4xcVoIIQVu">
+    <button class="on" data-tab="C" data-page-node-id="Yux8NFeFr6V62euTtz4ECw"><b data-page-node-id="c6j0oquS8KytvMcUFMRZHM">方案 C</b>分组重排<em class="pick-tag" data-page-node-id="t8q5mOw8ovUkcKkkAwb1z2">已选</em></button>
+    <button data-tab="B" data-page-node-id="M203zMsNKDOWQoOkWmTQPO"><b data-page-node-id="AZN3pMayHxdvu7CKv0DtWH">方案 B</b>摘要优先</button>
+    <button data-tab="A" data-page-node-id="MGvBQIrLyXnWM4UZbVXRbY"><b data-page-node-id="u9QGOvd3fGaj6oVyk6QjTF">方案 A</b>精简去重</button>
+    <button data-tab="D" data-page-node-id="5iZMnrXgpxKast01L9uoCI"><b data-page-node-id="VD2UCXwjKwSo4T8n2RHjUZ">方案 D</b>推荐 / 自定义</button>
+  </div>
+
+  <section class="pane on" data-p="C" data-page-node-id="pw2L2WalL0e9a8lXIxBM9o">
+    <div class="pane-head" data-page-node-id="CPLD0PH1FS54UEz3ku9fD0">
+      <b data-page-node-id="ynzcyR3CPvjNIURhP3FfJS">方案 C · 分组重排</b>
+      <span data-page-node-id="U8qAzwH8g94Gj3B6JiQhbJ">按「预测目标 / 数据设置」分两段</span>
+      <span class="stat" data-page-node-id="6St8lqAi8GMbEefhBU22kZ">字段 7 → <i data-page-node-id="4fExga3Cg8hfEBYKdpdWoJ">3 行</i> · 高度约 552px</span>
+    </div>
+    <div class="stage" data-p="C" data-page-node-id="XESUWlLIbB03UkVEBrEc91"><div id="cardC" data-page-node-id="p7CGTi7FEQeaVSKcyJjKyb"></div></div>
+    <div class="notes" data-page-node-id="Hf4BmwSUTFCFgc2WOhJwjM">
+      <div class="note" data-page-node-id="MIFnkR0qrzuQjHtD9YPjTa">
+        <b data-page-node-id="oNqt1ND2FA3HSvIG4Ps3Jp">做了什么</b>
+        <ul data-page-node-id="X0sSoNG3iFbs2IpNGtXcdm">
+          <li data-page-node-id="zu400CL9k9lzdBFoPLonK7">分两段：<b data-page-node-id="Bk5vIFSSBxJQsoYLf2LqJ3">预测目标</b>（指标 / 产品 / 关注线，三列一行）、<b data-page-node-id="ZtLPqTfV0FCO8Xqe9SBf5D">数据设置</b>（数据源 / 历史区间 / 预测设置）</li>
+          <li data-page-node-id="XE6okrsDIUpFeYKHEkx3Gl">历史起止合并成一个区间控件，预测天数与区间合并成一个复合控件</li>
+          <li data-page-node-id="l5GrmhbyfHQjs52MuvoLHs">说明只留在需要交代口径的地方（历史区间、预测设置、更多数据条件），其余字段不写灰字</li>
+          <li data-page-node-id="2DRFDRgihCNuEBp1cHRxPx">七项从四行压到三行，没有空格</li>
+        </ul>
+      </div>
+      <div class="note warn" data-page-node-id="w67D0i2A5XrIrensD5ZAfd">
+        <b data-page-node-id="BPFkySaL1PKJMWXtFCQlvx">代价</b>
+        <ul data-page-node-id="wxfqqk8W9cytGhL4GYydDt">
+          <li data-page-node-id="vokEBAswDrEPhlEh9VVUSS">复合控件要新做，日期区间和「天数 + 区间」都是新组件</li>
+          <li data-page-node-id="jnrxaCBH1TMwP6sePEe3zw">口径说明只在三处出现，其余字段的取数规则要回到数据源描述里找</li>
+          <li data-page-node-id="cpkHm7A32RxwFBEOGLVSMl">三列在 772px 下每列 236px，长产品名会被截断</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="pane" data-p="B" data-page-node-id="laUP4rkQtR84nmsfOZaOdk">
+    <div class="pane-head" data-page-node-id="M9ddSihPqv2iOGmWQQOUl5">
+      <b data-page-node-id="vr3pmZemQTDqptgulDuwKb">方案 B · 摘要优先</b>
+      <span data-page-node-id="1QZBoTAGuu1HG9ah8oQnoP">默认只看结论，要改才展开</span>
+      <span class="stat" data-page-node-id="DoHreOFHRRUbkq7vsdavnH">默认高度约 <i data-page-node-id="juXnBCCO23Y8TunVOU6JL0">270px</i> · 展开后 610px</span>
+    </div>
+    <div class="stage" data-p="B" data-page-node-id="cXVetmOfMLTnPrAGK8ONB0"><div id="cardB" data-page-node-id="OCtjarQIS7r51NzyjKIolJ"></div></div>
+    <div class="notes" data-page-node-id="K8LTT14ohDGGivY6R4VoGY">
+      <div class="note" data-page-node-id="FPbGQKCzutdDlso5ljk5Bx">
+        <b data-page-node-id="ithV6V0WiHyLmXdYg5lhhh">做了什么</b>
+        <ul data-page-node-id="B7AHl09OcKR98Dp2qfKJgE">
+          <li data-page-node-id="GArMagYxpFS9ZGEZeCRN29">顶部三行摘要：预测对象 / 数据范围 / 预测设置，一眼读完本轮到底要算什么</li>
+          <li data-page-node-id="B1elHWAJRQK6qpKjVVA3Vq">表单默认收起，点「修改条件」才展开，展开后仍是两列七项</li>
+          <li data-page-node-id="0HrSRti1gNl5cBAcizbPax">footer 只留两个按钮，不再重复已经写在摘要里的数字</li>
+        </ul>
+      </div>
+      <div class="note warn" data-page-node-id="M60AF1RGHgIcZgCMEc9q93">
+        <b data-page-node-id="ztVbc9d2rbF93gBQ7kb4dd">代价</b>
+        <ul data-page-node-id="OBqesETkpMHEXtsgexkGnU">
+          <li data-page-node-id="TT55HBNFYiQe6IcwpKGaCP">第一次使用的人看不到有哪些可调项，容易直接点确认</li>
+          <li data-page-node-id="XZEUHPQSAhjPzqQ33tobTb">多一次点击才能改任何一项</li>
+          <li data-page-node-id="5MO6X45ZnU2zKgcz1ClLeN">摘要里的值会变，需要保证与表单严格同步</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="pane" data-p="A" data-page-node-id="iWuywtwhlx7FfRjIBYZFOX">
+    <div class="pane-head" data-page-node-id="xkyzdaPlC6IERFIcf4Ccpv">
+      <b data-page-node-id="K73hGdEWQOXgV6600LNEJx">方案 A · 精简去重</b>
+      <span data-page-node-id="QHRzzoX7b1rqAAd4Y9YHXn">不动结构，只删重复内容</span>
+      <span class="stat" data-page-node-id="koERfUAyjfpNsWSpTHvANi">字段 7 · 图标 <i data-page-node-id="PkLGBjrSmdlgsLssGQRVKb">3</i> · 说明块 <i data-page-node-id="1pIBGLDDaA9m38pgA51R1B">1</i> · 高度约 600px</span>
+    </div>
+    <div class="stage" data-p="A" data-page-node-id="cESekl1nSgwDKqxPF1cu2F"><div id="cardA" data-page-node-id="WQ2ADhAItUliQtxvYGrLNp"></div></div>
+    <div class="notes" data-page-node-id="WYEQxRi6u4mFomBgLWWL5g">
+      <div class="note" data-page-node-id="acvF2qC7UQr8aM6tCb8ubT">
+        <b data-page-node-id="5L5ODAf0Wy3lNdrKbtzEbk">做了什么</b>
+        <ul data-page-node-id="2gFQW1fxwHqh8iT5ZD6skK">
+          <li data-page-node-id="MD8GSXVryAkuBpNJMYf5O8">蓝提示条改为标题右侧一行「恢复推荐设置 7 天 / 90%」，只在改动过才需要点</li>
+          <li data-page-node-id="Ptrh9UtTKjNoid9ROJv9NZ">指标口径并入数据源下方一行灰字，不再是独立色块</li>
+          <li data-page-node-id="HL0CTd7J6VMMI39FgTHVI1">ⓘ 从 7 个减到 3 个：数据源、预测指标、关注线；其余靠 placeholder 举例</li>
+          <li data-page-node-id="UhMD93GuMuHrHdEjDw8r64">底部确认语句压成 footer 左侧一行「07-01 ~ 11-10 · 未来 7 天」</li>
+          <li data-page-node-id="3GS2t2mGQtL4PdG557Bdee">关注线跨整行，右端标出单位，不留半行空位</li>
+        </ul>
+      </div>
+      <div class="note warn" data-page-node-id="fbl6bRDKs0r93SqKJboNFi">
+        <b data-page-node-id="elB1CRKDKiPh5UpftyNaLD">代价</b>
+        <ul data-page-node-id="pbKL1qKCrDDwDRPBuAYYwa">
+          <li data-page-node-id="KmggCt1lEf5wE0808YZLju">四个字段失去字段级说明，只在 placeholder 里给一个例子</li>
+          <li data-page-node-id="56x43tM9k7CT0gPrCSWBiS">「更多数据条件」仍是一个纯文字折叠，发现性一般</li>
+          <li data-page-node-id="1AK0H0TZnlaU1P2oGtReGt">结构没变，两列四行的节奏还在，只是变轻</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="pane" data-p="D" data-page-node-id="HMWrP6AFniTtZUiMqg0Fin">
+    <div class="pane-head" data-page-node-id="sTaXDIxDN8oqTof5smvahl">
+      <b data-page-node-id="5ziLda4NHPrwUvU1lwUnPh">方案 D · 推荐 / 自定义</b>
+      <span data-page-node-id="Akm58G25gHRp39gtP4Ye1H">新手走三个决策，老手开全量</span>
+      <span class="stat" data-page-node-id="DoSTbHiCdHQBcvuxNVpeYL">推荐态 <i data-page-node-id="GMBTdoxuUQ9NCIhLcPBuOP">3 项</i> · 高度约 280px</span>
+    </div>
+    <div class="stage" data-p="D" data-page-node-id="azNvf4gXBTAu9mGpMIudxi"><div id="cardD" data-page-node-id="sWkKWLePojQIUbWeRDab8T"></div></div>
+    <div class="notes" data-page-node-id="hoIWIpFRcnpnKieMCzs4SF">
+      <div class="note" data-page-node-id="o1CldFDSSOGgXQQlEhT1xF">
+        <b data-page-node-id="GKw2PjIEKqSAUG2YpGpGDy">做了什么</b>
+        <ul data-page-node-id="wQlRCHXYCFbDhAGM52B8Cj">
+          <li data-page-node-id="FgtiJNVIacNBEWKNoZTHHW">标题右侧一个两档开关：推荐设置 / 自定义</li>
+          <li data-page-node-id="ltVVzBJeUMokY16yx2GE8i">推荐态只问三件事：预测指标、产品范围、预测几天（天数用胶囊，1 / 7 / 14 / 30）</li>
+          <li data-page-node-id="hb7Oggduqu5JWIiq1RD3da">其余四项以一行只读文字交代「90% 区间 · 近 90 天 · 无关注线 · 平台数据源 v1」</li>
+          <li data-page-node-id="qMrzmwLElEcoEYvJUnp7So">切到自定义态才出现完整七项与「更多数据条件」</li>
+        </ul>
+      </div>
+      <div class="note warn" data-page-node-id="sGz8nzmCzHMUmL0ZMQakFo">
+        <b data-page-node-id="mZQ50ewdphPQpBDi36G5La">代价</b>
+        <ul data-page-node-id="QWDbe4hVfU0H0IryH7kKtq">
+          <li data-page-node-id="Wcr74lOxPyCT71Zw5s4KPq">需要记住用户上次用的模式，否则老手每次都要多切一刀</li>
+          <li data-page-node-id="MGD9sSDGlAPEDJDT23BLq5">推荐态隐藏了数据源版本，出问题时不好追责</li>
+          <li data-page-node-id="sTWQcKdlPxK8X682E8KfhK">两套布局要分别维护</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <div class="tail" data-page-node-id="qht0xz4IZRcDH6ARCNgpBQ">
+    <b class="h" data-page-node-id="GfXCul1U1ZDDnTwUTu2Yi4">如果只选一个</b>
+    <p data-page-node-id="ieIMCMsZFDI5tuRo52ypiB">选 <b data-page-node-id="uSDM5FF95OZwaEkO7JDIu5">方案 A</b>。它删掉的正是那六条诊断里的内容，改动集中在一个渲染函数和几行样式，不新增任何组件，风险最低；卡片从 818px 降到约 600px，还顺手补掉了「关注线右边空一格」。</p>
+    <p data-page-node-id="Xem34D1YKQk19ZGLCoQvVA">如果还能再往前走一步，把 <b data-page-node-id="vx5EYLLAWj1rnGt52AOcGI">C 的两段分组</b>叠加上去：A 负责删重复，C 负责把剩下的按语义排成两段、把四行压成三行。两者不冲突，合起来是最终形态。<b data-page-node-id="drpawAvBjPWFCe2wLjWYf4">B</b> 更适合「这张卡会被反复看、但很少改」的场景；<b data-page-node-id="Hh6GOaX3XFBqZgOurKDOEE">D</b> 适合产品里有明确的新手与熟练用户分层。</p>
+  </div>
+</div>
+
+<div class="toast" id="toast" data-page-node-id="it7vFsgs4hmjLPyZrqiGH4"></div>
+
+<script>
+(function(){
+  'use strict';
+
+  var SOURCES = ['AYM 质量统计数据源 · v1','AYM 设备稼动数据源 · v3','AYM 综合良率数据源 · v2'];
+  var METRICS = ['AR 良品产出量','AR 综合良率','BR 良品产出量','BR 综合良率'];
+  var PRODUCTS = ['全部产品','B8A043W4V601','B8A043W5V601','B8A050W4V601'];
+  var INTERVALS = ['90% · 常规观察','95% · 更宽范围'];
+
+  function base(){
+    return {
+      input:'db', source:SOURCES[0], metric:METRICS[0], product:PRODUCTS[0],
+      start:'2026-07-01', end:'2026-11-10', horizon:'7',
+      interval:INTERVALS[0], threshold:'',
+      volume:'', dim:'不筛选', dimVal:'不筛选',
+      open:false, mode:'rec'
+    };
+  }
+  var S = {A:base(), B:base(), C:base(), D:base()};
+
+  function caret(){
+    return '<svg class="caret" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2.2 3.9 5 6.7l2.8-2.8" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  }
+  function opts(list, val){
+    return list.map(function(o){ return '<option'+(o===val?' selected':'')+'>'+o+'</option>'; }).join('');
+  }
+  function selBox(id, list, val, key){
+    return '<div class="ctl"><select id="'+id+'" data-k="'+key+'">'+opts(list,val)+'</select>'+caret()+'</div>';
+  }
+  function inf(text, up){
+    return '<i class="inf'+(up?' up':'')+'" tabindex="0">i<span class="tip">'+text+'</span></i>';
+  }
+  function seg(active, name){
+    return '<div class="seg">'+
+      '<button class="'+(active==='db'?'on':'')+'" data-act="input" data-v="db" data-p="'+name+'">平台数据源</button>'+
+      '<button class="'+(active==='file'?'on':'')+'" data-act="input" data-v="file" data-p="'+name+'">上传文件</button>'+
+    '</div>';
+  }
+  function acts(){
+    return '<div class="acts"><button class="btn ghost">保存</button><button class="btn primary">确认并预览</button></div>';
+  }
+
+  /* ===== BOE 控件（select / date-picker / input-number）===== */
+  var BOE_CK = '<svg class="boe-control-icon" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M6.64 11.52 3 7.87l.67-.67 2.97 2.97 5.68-5.68.68.67z"/></svg>';
+  function boeSel(id, list, val, key){
+    var cur='', op='';
+    for(var i=0;i<list.length;i++){
+      var v=String(list[i]), on=v===String(val);
+      if(on){ cur=v; }
+      op += '<div class="boe-select-option'+(on?' is-selected':'')+'" role="option" tabindex="0" aria-selected="'+on+'" data-boe-opt data-sel="'+id+'" data-v="'+v+'">'+v+(on?'<span class="boe-select-option-check" aria-hidden="true">'+BOE_CK+'</span>':'')+'</div>';
+    }
+    return '<input type="hidden" id="'+id+'" data-k="'+key+'" value="'+cur+'">'+
+      '<div class="boe-select" data-boe-select style="width:100%">'+
+        '<button class="boe-select-trigger" type="button" aria-haspopup="listbox" aria-expanded="false">'+
+          '<span class="boe-select-value has-value">'+cur+'</span>'+
+          '<i class="boe-select-arrow" aria-hidden="true"><svg class="boe-control-icon boe-control-chevron-down" viewBox="0 0 16 16"><path d="M5.25 6.25 8 9l2.75-2.75" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></i>'+
+        '</button>'+
+        '<div class="boe-select-dropdown"><div class="boe-select-options" role="listbox">'+op+'</div></div>'+
+      '</div>';
+  }
+  function boeNum(id, value, min, max, step, ph){
+    var v=(value===''||value===null||typeof value==='undefined')?'':String(value);
+    var pha=ph?' placeholder="'+ph+'"':'';
+    var ico=function(h){ return '<svg class="boe-input-number-icon boe-control-icon" aria-hidden="true"><use href="#boe-icon-'+h+'"></use></svg>'; };
+    return '<div class="input-number-module-details" style="width:100%">'+
+      '<div class="boe-input-number boe-input-number--compact" data-min="'+min+'" data-max="'+max+'" data-step="'+step+'" style="width:100%">'+
+        '<button class="boe-input-number-button" data-boe-step="-1" type="button" aria-label="减少">'+ico('minus-small')+'</button>'+
+        '<input class="boe-input-number-input" data-input-number-input id="'+id+'" type="number" value="'+v+'" min="'+min+'" max="'+max+'" step="'+step+'"'+pha+' data-k="'+(id==='cThreshold'?'threshold':id==='cHorizon'?'horizon':'volume')+'">'+
+        '<button class="boe-input-number-button" data-boe-step="1" type="button" aria-label="增加">'+ico('plus-small')+'</button>'+
+      '</div></div>';
+  }
+  function boeDate(id, value){
+    var v=String(value||''), m=v.match(/^(\d{4})-(\d{2})-(\d{2})$/), y=m?Number(m[1]):2026, mo=m?Number(m[2])-1:10;
+    return '<input type="hidden" id="'+id+'" data-k="'+(id==='cStart'?'start':'end')+'" value="'+v+'">'+
+      '<div class="picker-module-details" data-picker-module="date-picker" style="width:100%">'+
+      '<div class="boe-date-picker'+(v?' has-value':'')+'" data-date-input="'+id+'" data-selected="'+v+'" data-year="'+y+'" data-month="'+mo+'" style="width:100%">'+
+        '<button class="boe-date-trigger" type="button" aria-haspopup="dialog" aria-expanded="false">'+
+          '<span class="boe-date-value'+(v?' has-value':'')+'">'+(v||'请选择日期')+'</span>'+
+          '<svg class="boe-control-icon boe-control-suffix boe-control-suffix--passive boe-control-calendar boe-date-calendar" aria-hidden="true"><use href="#boe-icon-calendar"></use></svg>'+
+        '</button>'+
+        '<div class="boe-date-panel" role="dialog" aria-label="选择日期"></div>'+
+      '</div></div>';
+  }
+  function boe$(id){ return document.getElementById(id); }
+  function boePad(n){ return n<10?'0'+n:''+n; }
+  function boeISO(y,m,d){ return y+'-'+boePad(m+1)+'-'+boePad(d); }
+  function boeCloseDates(except){
+    var nodes=document.querySelectorAll('.boe-date-picker.is-open');
+    for(var i=0;i<nodes.length;i++){
+      if(nodes[i]!==except){ nodes[i].classList.remove('is-open'); var tr=nodes[i].querySelector('.boe-date-trigger'); if(tr){ tr.setAttribute('aria-expanded','false'); } }
+    }
+  }
+  function boeRenderDate(root){
+    var y=Number(root.getAttribute('data-year')), mo=Number(root.getAttribute('data-month')), panel=root.querySelector('.boe-date-panel');
+    if(!panel||!isFinite(y)){ return; }
+    var arrow='<svg class="boe-control-icon" aria-hidden="true"><use href="#boe-icon-caret-down-small"></use></svg>';
+    var lead=new Date(y,mo,1).getDay(), total=new Date(y,mo+1,0).getDate(), sel=root.getAttribute('data-selected'), cells='';
+    var _t=new Date(), tdy=_t.getFullYear(), tmo=_t.getMonth(), tdd=_t.getDate();
+    for(var k=0;k<lead;k++){ cells+='<span aria-hidden="true"></span>'; }
+    for(var d=1;d<=total;d++){
+      var iso=boeISO(y,mo,d), on=iso===sel, today=iso===boeISO(tdy,tmo,tdd);
+      cells+='<button type="button" class="boe-date-cell'+(on?' is-selected':'')+(today?' is-today':'')+'" data-date-cell="'+iso+'" aria-label="'+iso+'"'+(on?' aria-pressed="true"':'')+'>'+d+'</button>';
+    }
+    panel.innerHTML='<div class="boe-date-panel-header"><button type="button" class="boe-date-nav boe-date-prev" data-date-nav="-1" aria-label="上个月">'+arrow+'</button><span class="boe-date-title">'+y+' 年 '+(mo+1)+' 月</span><button type="button" class="boe-date-nav boe-date-next" data-date-nav="1" aria-label="下个月">'+arrow+'</button></div>'+
+      '<div class="boe-date-week" aria-hidden="true"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>'+
+      '<div class="boe-date-grid">'+cells+'</div>'+
+      '<div class="boe-date-panel-footer"><button type="button" class="boe-date-link" data-date-today>今天</button><button type="button" class="boe-date-link" data-date-clear>清除</button></div>';
+  }
+  function boeSetDate(root, value){
+    var id=root.getAttribute('data-date-input'), hidden=boe$(id), val=String(value||''), m=val.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    root.setAttribute('data-selected',val);
+    if(m){ root.setAttribute('data-year',m[1]); root.setAttribute('data-month',Number(m[2])-1); }
+    root.classList.toggle('has-value',!!val);
+    var label=root.querySelector('.boe-date-value');
+    if(label){ label.textContent=val||'请选择日期'; label.classList.toggle('has-value',!!val); }
+    if(hidden){ hidden.value=val; hidden.dispatchEvent(new Event('input',{bubbles:true})); }
+    root.classList.remove('is-open');
+    var tr=root.querySelector('.boe-date-trigger'); if(tr){ tr.setAttribute('aria-expanded','false'); }
+  }
+  function boeStep(root, dir){
+    var input=root.querySelector('[data-input-number-input]'); if(!input){ return; }
+    var step=Number(root.getAttribute('data-step'))||1, min=root.getAttribute('data-min'), max=root.getAttribute('data-max');
+    var cur=Number(input.value), base=isFinite(cur)?cur:(min!==''?Number(min):0), next=base+dir*step;
+    if(min!==''&&min!==null&&next<Number(min)){ next=Number(min); }
+    if(max!==''&&max!==null&&next>Number(max)){ next=Number(max); }
+    input.value=next; input.dispatchEvent(new Event('input',{bubbles:true}));
+  }
+  document.addEventListener('click', function(e){
+    var trig=e.target.closest('.boe-date-trigger');
+    if(trig){
+      var root=trig.closest('.boe-date-picker'), open=!root.classList.contains('is-open');
+      boeCloseDates(root); if(open){ boeRenderDate(root); }
+      root.classList.toggle('is-open',open); trig.setAttribute('aria-expanded',String(open)); return;
+    }
+    var nav=e.target.closest('[data-date-nav]');
+    if(nav){
+      var r=nav.closest('.boe-date-picker'), mo=Number(r.getAttribute('data-month'))+Number(nav.getAttribute('data-date-nav')), y=Number(r.getAttribute('data-year'));
+      if(mo<0){ mo=11; y--; } if(mo>11){ mo=0; y++; }
+      r.setAttribute('data-month',mo); r.setAttribute('data-year',y); boeRenderDate(r); return;
+    }
+    var cell=e.target.closest('[data-date-cell]');
+    if(cell){ boeSetDate(cell.closest('.boe-date-picker'),cell.getAttribute('data-date-cell')); return; }
+    if(e.target.closest('[data-date-today]')){ var t=new Date(); boeSetDate(e.target.closest('.boe-date-picker'),boeISO(t.getFullYear(),t.getMonth(),t.getDate())); return; }
+    if(e.target.closest('[data-date-clear]')){ boeSetDate(e.target.closest('.boe-date-picker'),''); return; }
+    if(!e.target.closest('.boe-date-picker')){ boeCloseDates(); }
+
+    var st=e.target.closest('[data-boe-step]');
+    if(st){ boeStep(st.closest('.boe-input-number'), Number(st.getAttribute('data-boe-step'))); return; }
+
+    var sel=e.target.closest('.boe-select-trigger');
+    if(sel){
+      var box=sel.closest('.boe-select'), on=!box.classList.contains('is-open');
+      var opened=document.querySelectorAll('.boe-select.is-open');
+      for(var i=0;i<opened.length;i++){ if(opened[i]!==box){ opened[i].classList.remove('is-open'); opened[i].querySelector('.boe-select-trigger').setAttribute('aria-expanded','false'); } }
+      box.classList.toggle('is-open',on); sel.setAttribute('aria-expanded',String(on)); return;
+    }
+    var opt=e.target.closest('[data-boe-opt]');
+    if(opt){
+      var sid=opt.getAttribute('data-sel'), sv=opt.getAttribute('data-v');
+      var box2=opt.closest('.boe-select'), val=box2.querySelector('.boe-select-value');
+      if(val){ val.textContent=sv; }
+      box2.querySelectorAll('.boe-select-option').forEach(function(o){
+        var on=o===opt; o.classList.toggle('is-selected',on); o.setAttribute('aria-selected',String(on));
+        var ck=o.querySelector('.boe-select-option-check');
+        if(on&&!ck){ o.insertAdjacentHTML('beforeend','<span class="boe-select-option-check" aria-hidden="true">'+BOE_CK+'</span>'); }
+        if(!on&&ck){ ck.remove(); }
+      });
+      var hid=boe$(sid); if(hid){ hid.value=sv; hid.dispatchEvent(new Event('input',{bubbles:true})); }
+      box2.classList.remove('is-open');
+      box2.querySelector('.boe-select-trigger').setAttribute('aria-expanded','false');
+      return;
+    }
+    if(!e.target.closest('.boe-select')){
+      var os=document.querySelectorAll('.boe-select.is-open');
+      for(var j=0;j<os.length;j++){ os[j].classList.remove('is-open'); os[j].querySelector('.boe-select-trigger').setAttribute('aria-expanded','false'); }
+    }
+  });
+
+  /* ---------------- 方案 A ---------------- */
+  function renderA(){
+    var s = S.A;
+    return '<div class="card">'+
+      '<div class="c-head"><b>确认预测条件</b>'+
+        '<button class="link" data-act="reset" data-p="A">恢复推荐 7 天 / 90%</button>'+
+      '</div>'+
+      '<div class="c-body">'+
+        '<div class="mode-row"><span class="mlabel">本轮分析数据</span>'+seg(s.input,'A')+'</div>'+
+        '<div class="f">'+
+          '<label for="aSrc">数据源与口径版本 '+inf('修改数据源口径后需发布新版本；已有结果保留原快照。')+'</label>'+
+          selBox('aSrc', SOURCES, s.source, 'source')+
+          '<p class="hint">口径 SUM(QTY, GRADE ∈ [A,T,Q]) · 单位 片</p>'+
+        '</div>'+
+        '<div class="grid2" style="margin-top:14px">'+
+          '<div class="f"><label for="aMetric">预测指标 '+inf('关注合格比例时选良率；关注未来能交付多少时选良品产出量。')+'</label>'+selBox('aMetric',METRICS,s.metric,'metric')+'</div>'+
+          '<div class="f"><label for="aProduct">产品范围</label>'+selBox('aProduct',PRODUCTS,s.product,'product')+'</div>'+
+          '<div class="f"><label for="aStart">历史开始日期</label><div class="ctl"><input id="aStart" type="date" data-k="start" value="'+s.start+'"></div></div>'+
+          '<div class="f"><label for="aEnd">历史结束日期</label><div class="ctl"><input id="aEnd" type="date" data-k="end" value="'+s.end+'"></div></div>'+
+          '<div class="f"><label for="aHorizon">预测未来</label><div class="ctl"><input id="aHorizon" type="number" min="1" max="60" data-k="horizon" value="'+s.horizon+'"><span class="unit">天</span></div></div>'+
+          '<div class="f"><label for="aInterval">预测区间</label>'+selBox('aInterval',INTERVALS,s.interval,'interval')+'</div>'+
+        '</div>'+
+        '<div class="f" style="margin-top:14px">'+
+          '<label for="aThreshold">关注线 <span class="opt">选填</span> '+inf('填业务需要关注的最低值，例如良率 95。结果会统计低于该线的天数，不改变预测值。',1)+'</label>'+
+          '<div class="ctl"><input id="aThreshold" type="number" data-k="threshold" placeholder="例如 95，留空则只分析趋势" value="'+s.threshold+'"><span class="unit">片</span></div>'+
+        '</div>'+
+        '<details class="more"><summary>更多数据条件</summary><div class="more-bd"><div class="grid2">'+
+          '<div class="f"><label for="aVolume">最低日样本量</label><div class="ctl"><input id="aVolume" type="number" data-k="volume" placeholder="不限制" value="'+s.volume+'"></div></div>'+
+          '<div class="f"><label for="aDim">附加维度</label>'+selBox('aDim',['不筛选','LINE_ID · 产线','FACTORY · 工厂'],s.dim,'dim')+'</div>'+
+        '</div></div></details>'+
+      '</div>'+
+      '<div class="c-foot">'+
+        '<span class="sum">'+s.start+' ~ '+s.end+' · 未来 '+s.horizon+' 天 · '+s.interval.split(' · ')[0]+'</span>'+
+        acts()+
+      '</div>'+
+    '</div>';
+  }
+
+  /* ---------------- 方案 B ---------------- */
+  function renderB(){
+    var s = S.B;
+    var body = s.open ? (
+      '<div class="b-edit"><span class="hint">完整参数</span><span class="line"></span><button class="link" data-act="toggleB" data-p="B">收起</button></div>'+
+      '<div class="f">'+
+        '<label for="bSrc">数据源与口径版本 '+inf('修改数据源口径后需发布新版本；已有结果保留原快照。')+'</label>'+
+        selBox('bSrc', SOURCES, s.source, 'source')+
+        '<p class="hint">口径 SUM(QTY, GRADE ∈ [A,T,Q]) · 单位 片</p>'+
+      '</div>'+
+      '<div class="grid2" style="margin-top:14px">'+
+        '<div class="f"><label for="bMetric">预测指标 '+inf('关注合格比例时选良率；关注未来能交付多少时选良品产出量。')+'</label>'+selBox('bMetric',METRICS,s.metric,'metric')+'</div>'+
+        '<div class="f"><label for="bProduct">产品范围</label>'+selBox('bProduct',PRODUCTS,s.product,'product')+'</div>'+
+        '<div class="f"><label for="bStart">历史开始日期</label><div class="ctl"><input id="bStart" type="date" data-k="start" value="'+s.start+'"></div></div>'+
+        '<div class="f"><label for="bEnd">历史结束日期</label><div class="ctl"><input id="bEnd" type="date" data-k="end" value="'+s.end+'"></div></div>'+
+        '<div class="f"><label for="bHorizon">预测未来</label><div class="ctl"><input id="bHorizon" type="number" min="1" max="60" data-k="horizon" value="'+s.horizon+'"><span class="unit">天</span></div></div>'+
+        '<div class="f"><label for="bInterval">预测区间</label>'+selBox('bInterval',INTERVALS,s.interval,'interval')+'</div>'+
+      '</div>'+
+      '<div class="f" style="margin-top:14px"><label for="bThreshold">关注线 <span class="opt">选填</span></label>'+
+        '<div class="ctl"><input id="bThreshold" type="number" data-k="threshold" placeholder="例如 95，留空则只分析趋势" value="'+s.threshold+'"><span class="unit">片</span></div></div>'+
+      '<details class="more"><summary>更多数据条件</summary><div class="more-bd"><div class="grid2">'+
+        '<div class="f"><label for="bVolume">最低日样本量</label><div class="ctl"><input id="bVolume" type="number" data-k="volume" placeholder="不限制" value="'+s.volume+'"></div></div>'+
+        '<div class="f"><label for="bDim">附加维度</label>'+selBox('bDim',['不筛选','LINE_ID · 产线','FACTORY · 工厂'],s.dim,'dim')+'</div>'+
+      '</div></div></details>'
+    ) : (
+      '<div class="sumcard">'+
+        '<button class="link sum-edit" data-act="toggleB" data-p="B">修改条件</button>'+
+        '<div class="srow"><span class="k">预测对象</span><span class="v"><b>'+s.metric+'</b> · '+s.product+' · 关注线 '+(s.threshold?'<b>'+s.threshold+' 片</b>':'<em>未设置</em>')+'</span></div>'+
+        '<div class="srow"><span class="k">数据范围</span><span class="v">'+s.start+' ~ '+s.end+' · '+(s.input==='db'?s.source:'上传文件')+'</span></div>'+
+        '<div class="srow"><span class="k">预测设置</span><span class="v">未来 <b>'+s.horizon+' 天</b> · '+s.interval+'</span></div>'+
+      '</div>'
+    );
+
+    return '<div class="card">'+
+      '<div class="c-head"><b>确认预测条件</b>'+seg(s.input,'B')+'</div>'+
+      '<div class="c-body">'+body+'</div>'+
+      '<div class="c-foot"><span class="sum">确认后进入数据核对，字段映射可在那一步调整</span>'+acts()+'</div>'+
+    '</div>';
+  }
+
+  /* ---------------- 方案 C ---------------- */
+  function renderC(){
+    var s = S.C;
+    return '<div class="card boe-scope">'+
+      '<div class="c-head"><b>确认预测条件</b></div>'+
+      '<div class="c-body">'+
+        '<div class="mode-row" style="margin-bottom:18px">'+seg(s.input,'C')+'</div>'+
+
+        '<div class="sec">'+
+          '<div class="grp">预测目标</div>'+
+          '<div class="grid3">'+
+            '<div class="f"><label for="cMetric">预测指标</label>'+boeSel('cMetric',METRICS,s.metric,'metric')+'</div>'+
+            '<div class="f"><label for="cProduct">产品范围</label>'+boeSel('cProduct',PRODUCTS,s.product,'product')+'</div>'+
+            '<div class="f"><label for="cThreshold">关注线 <span class="opt">选填</span></label>'+boeNum('cThreshold',s.threshold,0,'',1,'例如 95')+'</div>'+
+          '</div>'+
+        '</div>'+
+
+        '<div class="sec">'+
+          '<div class="grp">数据设置</div>'+
+          '<div class="f">'+
+            '<label for="cSrc">数据源与口径版本 '+inf('修改数据源口径后需发布新版本；已有结果保留原快照。')+'</label>'+
+            boeSel('cSrc', SOURCES, s.source, 'source')+
+          '</div>'+
+          '<div class="grid2" style="margin-top:18px">'+
+            '<div class="f"><label>历史区间</label>'+
+              '<div class="boe-pair dates">'+boeDate('cStart',s.start)+'<span class="arrow">→</span>'+boeDate('cEnd',s.end)+'</div>'+
+              '<p class="hint">建议覆盖最近 3 ~ 4 个月</p>'+
+            '</div>'+
+            '<div class="f"><label>预测设置</label>'+
+              '<div class="boe-pair hz">'+boeNum('cHorizon',s.horizon,1,60,1)+boeSel('cInterval',INTERVALS,s.interval,'interval')+'</div>'+
+              '<p class="hint">首次建议 7 天，误差可查后再扩大</p>'+
+            '</div>'+
+          '</div>'+
+        '</div>'+
+
+        '<details class="more"><summary>更多数据条件</summary><div class="more-bd"><div class="grid2">'+
+          '<div class="f"><label for="cVolume">最低日样本量</label>'+boeNum('cVolume',s.volume,0,'',1,'不限制')+'<p class="hint">减少小样本造成的波动</p></div>'+
+          '<div class="f"><label for="cDim">附加维度</label>'+boeSel('cDim',['不筛选','LINE_ID · 产线','FACTORY · 工厂'],s.dim,'dim')+'<p class="hint">可按产线或工厂拆分</p></div>'+
+        '</div></div></details>'+
+      '</div>'+
+      '<div class="c-foot">'+acts()+'</div>'+
+    '</div>';
+  }
+
+  /* ---------------- 方案 D ---------------- */
+  function renderD(){
+    var s = S.D;
+    var isRec = s.mode === 'rec';
+    var body;
+
+    if(isRec){
+      body =
+        '<div class="dcards">'+
+          '<div class="dcard"><div class="dh">预测指标</div>'+
+            '<div class="dsel"><select data-k="metric" aria-label="预测指标">'+opts(METRICS,s.metric)+'</select>'+caret()+'</div></div>'+
+          '<div class="dcard"><div class="dh">产品范围</div>'+
+            '<div class="dsel"><select data-k="product" aria-label="产品范围">'+opts(PRODUCTS,s.product)+'</select>'+caret()+'</div></div>'+
+          '<div class="dcard"><div class="dh">预测几天 <span class="dhx">区间 '+s.interval.split(' · ')[0]+'</span></div>'+
+            '<div class="chips">'+
+              ['1','7','14','30'].map(function(d){
+                return '<button class="'+(s.horizon===d?'on':'')+'" data-act="horizon" data-v="'+d+'" data-p="D">'+d+'</button>';
+              }).join('')+
+            '</div></div>'+
+        '</div>'+
+        '<div class="defrow"><span class="grow">其余按默认：'+s.interval+' · 近 90 天历史 · 未设关注线 · '+s.source+'</span>'+
+          '<button data-act="mode" data-v="custom" data-p="D">逐项调整</button></div>';
+    } else {
+      body =
+        '<div class="f">'+
+          '<label for="dSrc">数据源与口径版本 '+inf('修改数据源口径后需发布新版本；已有结果保留原快照。')+'</label>'+
+          selBox('dSrc', SOURCES, s.source, 'source')+
+          '<p class="hint">口径 SUM(QTY, GRADE ∈ [A,T,Q]) · 单位 片</p>'+
+        '</div>'+
+        '<div class="grid2" style="margin-top:14px">'+
+          '<div class="f"><label for="dMetric">预测指标 '+inf('关注合格比例时选良率；关注未来能交付多少时选良品产出量。')+'</label>'+selBox('dMetric',METRICS,s.metric,'metric')+'</div>'+
+          '<div class="f"><label for="dProduct">产品范围</label>'+selBox('dProduct',PRODUCTS,s.product,'product')+'</div>'+
+          '<div class="f"><label for="dStart">历史开始日期</label><div class="ctl"><input id="dStart" type="date" data-k="start" value="'+s.start+'"></div></div>'+
+          '<div class="f"><label for="dEnd">历史结束日期</label><div class="ctl"><input id="dEnd" type="date" data-k="end" value="'+s.end+'"></div></div>'+
+          '<div class="f"><label for="dHorizon">预测未来</label><div class="ctl"><input id="dHorizon" type="number" min="1" max="60" data-k="horizon" value="'+s.horizon+'"><span class="unit">天</span></div></div>'+
+          '<div class="f"><label for="dInterval">预测区间</label>'+selBox('dInterval',INTERVALS,s.interval,'interval')+'</div>'+
+        '</div>'+
+        '<div class="f" style="margin-top:14px"><label for="dThreshold">关注线 <span class="opt">选填</span></label>'+
+          '<div class="ctl"><input id="dThreshold" type="number" data-k="threshold" placeholder="例如 95，留空则只分析趋势" value="'+s.threshold+'"><span class="unit">片</span></div></div>'+
+        '<details class="more"><summary>更多数据条件</summary><div class="more-bd"><div class="grid2">'+
+          '<div class="f"><label for="dVolume">最低日样本量</label><div class="ctl"><input id="dVolume" type="number" data-k="volume" placeholder="不限制" value="'+s.volume+'"></div></div>'+
+          '<div class="f"><label for="dDim">附加维度</label>'+selBox('dDim',['不筛选','LINE_ID · 产线','FACTORY · 工厂'],s.dim,'dim')+'</div>'+
+        '</div></div></details>';
+    }
+
+    return '<div class="card">'+
+      '<div class="c-head"><b>确认预测条件</b>'+
+        '<div class="seg" style="margin-left:auto">'+
+          '<button class="'+(isRec?'on':'')+'" data-act="mode" data-v="rec" data-p="D">推荐设置</button>'+
+          '<button class="'+(isRec?'':'on')+'" data-act="mode" data-v="custom" data-p="D">自定义</button>'+
+        '</div>'+
+      '</div>'+
+      '<div class="c-body">'+body+'</div>'+
+      '<div class="c-foot">'+
+        '<span class="sum">'+(isRec?'将预测 '+s.metric+' · '+s.product+' · 未来 '+s.horizon+' 天':'自定义模式下所有参数都可调整')+'</span>'+acts()+
+      '</div>'+
+    '</div>';
+  }
+
+  /* ---------------- 渲染与事件 ---------------- */
+  var R = {A:renderA, B:renderB, C:renderC, D:renderD};
+
+  function paint(p){
+    var host = document.getElementById('card'+p);
+    if(host){ host.innerHTML = R[p](); }
+  }
+  function paintAll(){ ['A','B','C','D'].forEach(paint); }
+
+  function toast(msg){
+    var el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('on');
+    clearTimeout(el._t);
+    el._t = setTimeout(function(){ el.classList.remove('on'); }, 1800);
+  }
+
+  document.querySelectorAll('.stage').forEach(function(stage){
+    var p = stage.getAttribute('data-p');
+
+    stage.addEventListener('change', function(e){
+      var el = e.target;
+      var k = el.getAttribute('data-k');
+      if(!k){ return; }
+      S[p][k] = el.value;
+      paint(p);
+    });
+
+    stage.addEventListener('input', function(e){
+      var el = e.target;
+      var k = el.getAttribute('data-k');
+      if(!k || el.tagName !== 'INPUT' || el.type === 'date'){ return; }
+      S[p][k] = el.value;
+      // 仅同步 footer 与摘要，不重绘输入框，避免丢焦点
+      if(p === 'A'){
+        var sum = stage.querySelector('.c-foot .sum');
+        if(sum){ sum.textContent = S.A.start+' ~ '+S.A.end+' · 未来 '+(S.A.horizon||'-')+' 天 · '+S.A.interval.split(' · ')[0]; }
+      }
+      if(p === 'C'){
+        // footer 不再重复历史区间与天数，这里无需同步
+      }
+    });
+
+    stage.addEventListener('click', function(e){
+      var btn = e.target.closest('[data-act]');
+      if(!btn){ return; }
+      var act = btn.getAttribute('data-act');
+      var val = btn.getAttribute('data-v');
+
+      if(act === 'input'){
+        S[p].input = val;
+        paint(p);
+        return;
+      }
+      if(act === 'reset'){
+        S.A.horizon = '7';
+        S.A.interval = INTERVALS[0];
+        paint('A');
+        toast('已恢复推荐设置：未来 7 天 · 90% 区间');
+        return;
+      }
+      if(act === 'toggleB'){
+        S.B.open = !S.B.open;
+        paint('B');
+        return;
+      }
+      if(act === 'mode'){
+        S.D.mode = val;
+        paint('D');
+        return;
+      }
+      if(act === 'horizon'){
+        S.D.horizon = val;
+        paint('D');
+        return;
+      }
+    });
+  });
+
+  /* tab 切换 */
+  var tabs = document.querySelectorAll('.tabs button');
+  tabs.forEach(function(b){
+    b.addEventListener('click', function(){
+      tabs.forEach(function(x){ x.classList.remove('on'); });
+      b.classList.add('on');
+      var p = b.getAttribute('data-tab');
+      document.querySelectorAll('.pane').forEach(function(pane){
+        pane.classList.toggle('on', pane.getAttribute('data-p') === p);
+      });
+    });
+  });
+
+  paintAll();
+})();
+</script>
+</body>
+</html>

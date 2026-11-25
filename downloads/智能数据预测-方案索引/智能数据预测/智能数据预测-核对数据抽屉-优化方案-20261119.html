@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>核对数据与字段 · 抽屉信息重排方案</title>
+<style>
+:root{
+  --blue:#0081FF; --blue-bg:#E9F3FF; --blue-line:#B9D8FF;
+  --n8:#303133; --n7:#4B5563; --n6:#909399; --n5:#737985;
+  --line:#E4E7ED; --line-2:#EBEEF5; --bg:#F5F7FA;
+  --amber:#B8741A; --amber-bg:#FFF7E8; --amber-line:#F5D9A8;
+  --green:#21A366;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;}
+body{
+  background:#EDF0F5;
+  font:14px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  color:var(--n8);
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1280px;margin:0 auto;padding:28px 24px 60px;}
+
+/* ---------- 页头 ---------- */
+.head h1{margin:0 0 6px;font-size:20px;font-weight:600;letter-spacing:.2px;}
+.head p{margin:0;color:var(--n5);font-size:13px;}
+.diag{margin:16px 0 20px;padding:14px 16px;background:#fff;border:1px solid var(--line);border-radius:8px;}
+.diag>b{display:block;font-size:12.5px;color:var(--n7);margin-bottom:8px;}
+.diag ol{margin:0;padding-left:18px;color:var(--n5);font-size:12.5px;line-height:1.9;}
+.diag code{font:12px/1 Consolas,monospace;background:#F2F4F7;padding:1px 4px;border-radius:3px;color:var(--n7);}
+
+/* ---------- tabs ---------- */
+.tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+.tabs button{
+  font:13px/1 inherit;font-family:inherit;padding:9px 14px;border-radius:6px;border:1px solid var(--line);
+  background:#fff;color:var(--n7);cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:.15s;
+}
+.tabs button b{font-weight:600;color:var(--n6);font-size:12px;}
+.tabs button:hover{border-color:#AFB8C6;}
+.tabs button.on{background:var(--blue);border-color:var(--blue);color:#fff;}
+.tabs button.on b{color:rgba(255,255,255,.75);}
+
+.pane{display:none;}
+.pane.on{display:block;}
+
+/* ---------- 舞台：模拟抽屉覆盖在内容区上 ---------- */
+.stage{
+  position:relative;height:720px;border:1px solid var(--line);border-radius:10px;overflow:hidden;
+  background:
+    radial-gradient(120px 60px at 12% 24%, #E7ECF4, transparent 70%),
+    linear-gradient(180deg,#F7F9FC,#EFF2F7);
+}
+.stage-bg{position:absolute;inset:0;padding:22px 0 0 26px;}
+.ghost-card{width:250px;padding:14px;background:#fff;border:1px solid var(--line-2);border-radius:8px;opacity:.9;}
+.ghost-card .l{height:9px;width:64%;background:#E9EDF3;border-radius:3px;margin-bottom:9px;}
+.ghost-card .l.s{width:40%;height:8px;}
+.ghost-card .num{font-size:22px;color:var(--n8);font-weight:600;margin:2px 0 4px;}
+.ghost-card .num small{font-size:11px;color:var(--n6);font-weight:400;margin-left:3px;}
+.ghost-card .row{display:flex;gap:6px;margin-top:10px;}
+.ghost-card .row span{height:18px;background:#EEF4FD;color:#3E6EA8;font-size:11px;border-radius:3px;padding:0 6px;line-height:18px;}
+.mask{position:absolute;inset:0;background:rgba(31,38,48,.26);}
+
+/* ---------- 抽屉 ---------- */
+.drawer{
+  position:absolute;top:0;right:0;bottom:0;width:900px;max-width:calc(100% - 24px);
+  background:#fff;border-left:1px solid var(--line);box-shadow:-18px 0 40px rgba(31,38,48,.14);
+  display:flex;flex-direction:column;
+}
+.d-head{flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:13px 20px;border-bottom:1px solid var(--line);}
+.d-title h2{margin:0;font-size:15px;font-weight:600;letter-spacing:.2px;}
+.d-sub{margin-top:2px;font-size:12px;color:var(--n6);}
+.d-actions{margin-left:auto;display:flex;align-items:center;gap:12px;flex:0 0 auto;}
+.linkbtn{border:0;background:none;padding:0;font:12px/1.4 inherit;font-family:inherit;color:var(--blue);cursor:pointer;}
+.linkbtn:hover{text-decoration:underline;}
+.xbtn{width:24px;height:24px;border:0;background:none;border-radius:4px;color:var(--n6);cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.xbtn:hover{background:#F2F4F7;color:var(--n7);}
+.d-body{flex:1;min-height:0;overflow:auto;padding:16px 20px;}
+.d-foot{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:12px 20px;border-top:1px solid var(--line);background:#fff;}
+.d-foot .sum{font-size:12px;color:var(--n5);}
+.d-foot .acts{margin-left:auto;display:flex;gap:8px;}
+.btn{height:30px;padding:0 14px;border-radius:4px;border:1px solid var(--line);background:#fff;color:var(--n7);font:13px/1 inherit;font-family:inherit;cursor:pointer;}
+.btn:hover{border-color:#AFB8C6;color:var(--n8);}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff;}
+.btn.primary:hover{background:#0073E6;border-color:#0073E6;color:#fff;}
+.btn.ghost{color:var(--blue);border-color:var(--blue-line);background:#fff;}
+.btn.ghost:hover{background:var(--blue-bg);}
+
+/* meta 条 */
+.meta{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--n5);line-height:18px;flex-wrap:wrap;}
+.meta .sep{color:#D5D9E0;}
+.meta .src{font-family:Consolas,monospace;color:var(--n7);}
+.meta .cnt{margin-left:auto;color:var(--n8);font-weight:600;font-size:13px;}
+.meta .cnt small{color:var(--n6);font-weight:400;font-size:11.5px;margin-left:3px;}
+
+/* 工具行 */
+.bar{display:flex;align-items:center;gap:12px;margin:14px 0 10px;font-size:12px;color:var(--n5);flex-wrap:wrap;}
+.bar .grow{flex:1;}
+.field-inline{display:inline-flex;align-items:center;gap:6px;}
+.sel{position:relative;display:inline-flex;align-items:center;}
+.sel select{
+  appearance:none;-webkit-appearance:none;height:28px;padding:0 26px 0 10px;border:1px solid #DCDFE6;border-radius:4px;
+  background:#fff;color:var(--n8);font:12.5px/1 inherit;font-family:inherit;cursor:pointer;outline:0;
+}
+.sel select:focus{border-color:var(--blue);box-shadow:0 0 0 2px var(--blue-bg);}
+.sel svg{position:absolute;right:8px;pointer-events:none;color:var(--n6);}
+.count{color:var(--n7);}
+.count b{color:var(--blue);font-weight:600;}
+.tips{position:relative;}
+.tips>button{width:20px;height:20px;border-radius:50%;border:1px solid var(--line);background:#fff;color:var(--n6);font:11px/1 inherit;cursor:pointer;}
+.tips>button:hover{border-color:var(--blue);color:var(--blue);}
+.pop{
+  position:absolute;right:0;top:26px;z-index:9;width:300px;padding:10px 12px;background:#fff;
+  border:1px solid var(--line);border-radius:6px;box-shadow:0 10px 28px rgba(31,35,41,.14);
+  font-size:12px;line-height:1.85;color:var(--n7);
+}
+.pop b{color:var(--n8);font-weight:600;}
+.pop[hidden]{display:none;}
+
+/* ---------- 表格 ---------- */
+.tbl-wrap{border:1px solid var(--line);border-radius:6px;overflow:auto;}
+.tbl-wrap::-webkit-scrollbar{height:8px;width:8px;}
+.tbl-wrap::-webkit-scrollbar-thumb{background:#D5D9E0;border-radius:4px;}
+.tbl-wrap::-webkit-scrollbar-thumb:hover{background:#C0C6D0;}
+.tbl-wrap::-webkit-scrollbar-track{background:#FAFBFD;}
+table.grid{width:100%;border-collapse:separate;border-spacing:0;font-size:12.5px;}
+table.grid th,table.grid td{
+  min-width:124px;padding:7px 10px;text-align:left;border-right:1px solid var(--line-2);border-bottom:1px solid var(--line-2);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+table.grid thead th{background:#FAFBFD;position:sticky;top:0;z-index:2;vertical-align:top;}
+table.grid thead tr.grp th{position:static;z-index:1;}
+table.grid th:last-child,table.grid td:last-child{border-right:0;}
+table.grid tbody tr:last-child td{border-bottom:0;}
+table.grid td.idx,table.grid th.idx{min-width:44px;width:44px;color:var(--n6);text-align:center;background:#FCFCFD;}
+table.grid td{color:var(--n7);}
+table.grid td.num{font-family:Consolas,monospace;color:var(--n8);}
+.ch{display:block;font:600 12.5px/1.7 Consolas,"Microsoft YaHei",monospace;color:var(--n8);}
+.cm{display:block;font-size:11px;line-height:1.5;color:var(--n6);}
+.tag-role{display:inline-flex;align-items:center;height:16px;padding:0 5px;border-radius:3px;font-size:10.5px;line-height:16px;margin-bottom:4px;}
+.th-target{background:#FFF9F0!important;box-shadow:inset 0 3px 0 #E6A23C;}
+.th-target .tag-role{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-line);}
+.th-feat{background:#F5FAFF!important;box-shadow:inset 0 3px 0 var(--blue);}
+.th-feat .tag-role{background:var(--blue-bg);color:#0066CC;border:1px solid var(--blue-line);}
+.th-idle{background:#FAFBFD!important;}
+.th-idle .tag-role{background:#F2F4F7;color:var(--n6);border:1px solid #E9ECF1;}
+.th-idle .ch,.th-idle .cm{color:var(--n6);}
+table.grid th.pick{cursor:pointer;}
+table.grid th.pick:hover .ch{color:var(--blue);}
+td.c-target{background:#FFFCF6;}
+table.grid.compact th,table.grid.compact td{min-width:103px;padding:6px 8px;}
+table.grid.compact .cm{font-size:10.5px;line-height:1.45;}
+td.c-feat{background:#F7FBFF;}
+
+/* 表下 */
+.tbl-foot{display:flex;align-items:center;gap:10px;margin-top:8px;font-size:11.5px;color:var(--n6);}
+.tbl-foot .grow{flex:1;}
+.pager{display:inline-flex;align-items:center;gap:6px;color:var(--n5);}
+.pager select{height:26px;border:1px solid var(--line);border-radius:4px;background:#fff;font:12px/1 inherit;font-family:inherit;color:var(--n7);padding:0 4px;}
+.pager button{width:24px;height:26px;border:1px solid var(--line);background:#fff;border-radius:4px;color:var(--n6);cursor:pointer;}
+.pager button:disabled{color:#C8CDD5;cursor:default;}
+
+/* 已选特征条（A / C） */
+.picked{display:flex;align-items:flex-start;gap:10px;margin-top:12px;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:#FCFDFF;}
+.picked .lab{flex:0 0 auto;font-size:12px;color:var(--n5);line-height:22px;}
+.picked .chips{display:flex;flex-wrap:wrap;gap:6px;flex:1;min-width:0;}
+.picked .chips .empty{font-size:12px;color:var(--n6);line-height:22px;}
+.chip{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 6px 0 8px;border-radius:3px;background:var(--blue-bg);border:1px solid var(--blue-line);color:#2B5F92;font:12px/1 Consolas,"Microsoft YaHei",monospace;}
+.chip button{border:0;background:none;padding:0;width:13px;height:13px;line-height:1;color:#5E86AE;cursor:pointer;font-size:13px;}
+.chip button:hover{color:#E54545;}
+.picked .ops{flex:0 0 auto;display:flex;gap:10px;line-height:22px;}
+
+/* ---------- B：左栏字段 ---------- */
+.split{display:grid;grid-template-columns:248px 1fr;gap:14px;margin-top:12px;align-items:start;}
+.col-panel{border:1px solid var(--line);border-radius:6px;overflow:hidden;}
+.col-panel .ph{padding:8px 10px;background:#FAFBFD;border-bottom:1px solid var(--line-2);font-size:12px;color:var(--n7);display:flex;align-items:center;gap:6px;}
+.col-panel .ph b{font-weight:600;}
+.col-panel .ph span{margin-left:auto;color:var(--n6);font-size:11.5px;}
+.grp-h{padding:7px 10px 5px;font-size:11px;color:var(--n6);letter-spacing:.4px;background:#fff;border-bottom:1px solid #F2F4F8;display:flex;align-items:center;gap:6px;}
+.grp-h .dot{width:6px;height:6px;border-radius:50%;}
+.grp-h.t .dot{background:#E6A23C;}
+.grp-h.f .dot{background:var(--blue);}
+.grp-h.i .dot{background:#C8CDD5;}
+.grp-h em{margin-left:auto;font-style:normal;font-size:11px;color:#A8B0BE;}
+.fitem{display:flex;align-items:center;gap:7px;padding:6px 10px;font-size:12px;color:var(--n7);cursor:pointer;border-bottom:1px solid #F7F8FA;}
+.fitem:last-child{border-bottom:0;}
+.fitem:hover{background:#F7FAFF;}
+.fitem .k{font-family:Consolas,monospace;font-size:11.5px;color:var(--n8);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.fitem .cn{font-size:11px;color:var(--n6);flex:0 0 auto;}
+.fitem .box{width:13px;height:13px;border:1px solid #C8CDD5;border-radius:3px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:#fff;}
+.fitem.on .box{background:var(--blue);border-color:var(--blue);}
+.fitem.on .box svg{display:block;}
+.fitem .radio{width:13px;height:13px;border:1px solid #C8CDD5;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;}
+.fitem.on .radio{border-color:#E6A23C;border-width:4px;}
+.fitem.dis{opacity:.62;cursor:default;}
+.fitem.dis:hover{background:#fff;}
+.col-panel .pf{padding:8px 10px;border-top:1px solid var(--line-2);background:#FAFBFD;font-size:11.5px;color:var(--n6);display:flex;gap:10px;}
+.preview-only .tbl-wrap{margin-top:0;}
+.preview-only .hint{display:flex;gap:8px;align-items:center;font-size:11.5px;color:var(--n6);margin-top:8px;}
+
+/* ---------- C：分组表头 ---------- */
+table.grid thead tr.grp th{
+  padding:5px 10px;font-size:11px;color:var(--n6);background:#F2F5F9;border-bottom:1px solid var(--line);
+  text-align:center;letter-spacing:.3px;
+}
+table.grid thead tr.grp th.g-t{background:#FDF3E5;color:var(--amber);}
+table.grid thead tr.grp th.g-f{background:#EAF4FF;color:#0066CC;}
+table.grid thead tr.grp th.g-i{background:#F5F6F8;color:#8A9099;}
+table.grid thead tr.grp th.gap{border-right:2px solid #E1E5EC;}
+.switch{display:inline-flex;align-items:center;gap:7px;cursor:pointer;color:var(--n5);}
+.switch .track{width:30px;height:16px;border-radius:9px;background:#D8DDE5;position:relative;transition:.16s;}
+.switch .track:after{content:"";position:absolute;left:2px;top:2px;width:12px;height:12px;border-radius:50%;background:#fff;transition:.16s;}
+.switch.on .track{background:var(--blue);}
+.switch.on .track:after{left:16px;}
+
+/* ---------- D：三步 ---------- */
+.steps{display:flex;align-items:center;gap:8px;margin-bottom:14px;}
+.steps .s{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--n6);}
+.steps .s i{width:18px;height:18px;border-radius:50%;border:1px solid #D8DDE5;background:#fff;display:inline-flex;align-items:center;justify-content:center;font-style:normal;font-size:11px;color:var(--n6);}
+.steps .s.on{color:var(--n8);font-weight:500;}
+.steps .s.on i{background:var(--blue);border-color:var(--blue);color:#fff;}
+.steps .s.done i{border-color:var(--blue);color:var(--blue);background:#fff;}
+.steps .ln{flex:0 0 26px;height:1px;background:var(--line);}
+.dsec{margin-bottom:12px;}
+.dsec h3{margin:0 0 3px;font-size:13.5px;font-weight:600;}
+.dsec p{margin:0 0 10px;font-size:12px;color:var(--n6);}
+.opt-list{display:flex;flex-direction:column;gap:8px;}
+.opt{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer;}
+.opt:hover{border-color:#AFB8C6;}
+.opt.on{border-color:var(--blue);background:#F7FBFF;box-shadow:0 0 0 2px rgba(0,129,255,.08);}
+.opt .rd{width:14px;height:14px;border-radius:50%;border:1px solid #C8CDD5;flex:0 0 auto;}
+.opt.on .rd{border:4px solid var(--blue);}
+.opt .nm{font-family:Consolas,monospace;font-size:12.5px;color:var(--n8);}
+.opt .cn{font-size:11.5px;color:var(--n6);margin-left:6px;}
+.opt .mt{margin-left:auto;font-size:11.5px;color:var(--n6);text-align:right;line-height:1.6;}
+.cardgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.fcard{padding:9px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer;position:relative;}
+.fcard:hover{border-color:#AFB8C6;}
+.fcard.on{border-color:var(--blue);background:#F5FAFF;}
+.fcard .n{font-family:Consolas,monospace;font-size:12px;color:var(--n8);margin-bottom:2px;}
+.fcard .c{font-size:11px;color:var(--n6);}
+.fcard .ck{position:absolute;right:8px;top:8px;width:14px;height:14px;border-radius:3px;border:1px solid #C8CDD5;background:#fff;display:flex;align-items:center;justify-content:center;}
+.fcard.on .ck{background:var(--blue);border-color:var(--blue);}
+.mini-sum{display:grid;grid-template-columns:1fr 1fr;gap:8px 18px;padding:12px;border:1px solid var(--line);border-radius:6px;background:#FCFDFF;font-size:12.5px;}
+.mini-sum div{display:flex;gap:8px;}
+.mini-sum span{color:var(--n6);font-size:12px;flex:0 0 62px;}
+.mini-sum b{font-weight:500;color:var(--n8);font-family:Consolas,"Microsoft YaHei",monospace;font-size:12px;}
+.warn-line{display:flex;gap:8px;align-items:center;margin-top:10px;padding:8px 10px;border-radius:4px;background:#FFF7E8;border:1px solid var(--amber-line);color:#8A5A14;font-size:12px;}
+
+/* ---------- 说明 ---------- */
+.notes{margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.note{padding:12px 14px;background:#fff;border:1px solid var(--line);border-radius:8px;}
+.note h4{margin:0 0 6px;font-size:12.5px;font-weight:600;color:var(--n8);display:flex;align-items:center;gap:6px;}
+.note h4 i{width:3px;height:12px;border-radius:2px;background:var(--blue);display:inline-block;font-style:normal;}
+.note p{margin:0;font-size:12.5px;color:var(--n5);line-height:1.85;}
+.note p+p{margin-top:4px;}
+.note.warn h4 i{background:#E6A23C;}
+.pick-note{margin-top:12px;padding:12px 14px;border-radius:8px;background:#F2F8FF;border:1px solid #CFE4FB;font-size:12.5px;color:#2D5F8E;line-height:1.85;}
+.pick-note b{color:#1B4E7E;}
+@media (max-width:1100px){
+  .stage{height:820px;}
+  .drawer{width:100%;max-width:none;}
+  .split{grid-template-columns:1fr;}
+  .notes{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="head">
+    <h1>核对数据与字段 · 信息重排方案</h1>
+    <p>同一份数据（11 列 / 119 条 / 预览 50 条）在四种布局下的样子。四个方案共用同一份勾选状态，切换 tab 可直接对比；表头、字段卡、下一步都可以点。</p>
+  </div>
+
+  <div class="diag">
+    <b>现在「乱」在哪 —— 五处重复与堆叠</b>
+    <ol>
+      <li><b>标题说三遍</b>：抽屉头「核对数据与字段」→ 内容区大标题「先核对数据，再选择模型输入」→ 副行又说一遍数据源与范围。</li>
+      <li><b>提示与入口重复</b>：「操作提示」整条灰底讲三段话，而「滑选特征列 / 切换目标列」两个按钮本身就是入口；图例列出 3 种角色，实际有 4 种。</li>
+      <li><b>表头一行塞四层</b>：角色标签 + 字段名 + 中文名·类型 + 「可选为特征 / 保留为索引 / 设为目标 / 当前目标」，每列都重复。</li>
+      <li><b>表格底部四层</b>：分页行 → 已选特征 chips → 数据集划分与验证 → footer 再报一次「目标 / 特征数」。</li>
+      <li><b>结论分散</b>：「目标是什么、选了几个特征」在工具栏、chips 区、footer 各出现一次，没有唯一落点。</li>
+    </ol>
+  </div>
+
+  <div class="tabs">
+    <button class="on" data-tab="A"><b>A</b> 去重收敛（小改）</button>
+    <button data-tab="B"><b>B</b> 左栏字段 + 右侧预览</button>
+    <button data-tab="C"><b>C</b> 按角色重排 + 分组表头</button>
+    <button data-tab="D"><b>D</b> 三步向导</button>
+  </div>
+
+  <!-- ================= A ================= -->
+  <section class="pane on" id="pane-A">
+    <div class="stage">
+      <div class="stage-bg">
+        <div class="ghost-card">
+          <div class="l"></div>
+          <div class="num">96.4<small>%</small></div>
+          <div class="l s"></div>
+          <div class="row"><span>14 天</span><span>AR 产线</span></div>
+        </div>
+      </div>
+      <div class="mask"></div>
+      <div class="drawer" id="dA"></div>
+    </div>
+    <div class="notes">
+      <div class="note">
+        <h4><i></i>做了什么</h4>
+        <p>内容区大标题整块删掉，数据源 / 范围 / 条数压成抽屉头下方一行 meta；「操作提示」收进工具栏的 <b>?</b> 气泡；表头从四层减到两层，角色改用顶部色条 + 小标签；底部把「划分与验证」并入折叠区，footer 只留一处结论。</p>
+      </div>
+      <div class="note warn">
+        <h4><i></i>取舍</h4>
+        <p>结构不动，仍是「一屏表格 + 底部 chips」，属最小改动、评审风险最低。代价是列多时仍需横向滚动，日期 / 标识列仍占两列宽。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= B ================= -->
+  <section class="pane" id="pane-B">
+    <div class="stage">
+      <div class="stage-bg">
+        <div class="ghost-card">
+          <div class="l"></div>
+          <div class="num">96.4<small>%</small></div>
+          <div class="l s"></div>
+          <div class="row"><span>14 天</span><span>AR 产线</span></div>
+        </div>
+      </div>
+      <div class="mask"></div>
+      <div class="drawer" id="dB"></div>
+    </div>
+    <div class="notes">
+      <div class="note">
+        <h4><i></i>做了什么</h4>
+        <p>把「选字段」和「看数据」拆开：左侧 248px 字段栏按 目标 / 特征 / 索引 三组列出，勾选只在这里发生；右侧表格回归纯预览，表头不再有按钮与说明。</p>
+      </div>
+      <div class="note warn">
+        <h4><i></i>取舍</h4>
+        <p>选择动作有唯一落点，表格可读性最好，也最容易做「已选 / 未选」的批量操作。代价是横向要够宽（抽屉需从 920px 加到 1000px 左右），窄屏要退化成上下堆叠。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= C ================= -->
+  <section class="pane" id="pane-C">
+    <div class="stage">
+      <div class="stage-bg">
+        <div class="ghost-card">
+          <div class="l"></div>
+          <div class="num">96.4<small>%</small></div>
+          <div class="l s"></div>
+          <div class="row"><span>14 天</span><span>AR 产线</span></div>
+        </div>
+      </div>
+      <div class="mask"></div>
+      <div class="drawer" id="dC"></div>
+    </div>
+    <div class="notes">
+      <div class="note">
+        <h4><i></i>做了什么</h4>
+        <p>列顺序按角色重排：目标 → 已选特征 → 其余可选 → 索引，并在最上方加一条分组表头（目标 / 特征 3 / 可选 4 / 索引 2）。再加「只看参与列」开关，默认把日期、标识列隐去。</p>
+      </div>
+      <div class="note warn">
+        <h4><i></i>取舍</h4>
+        <p>一屏能看清「哪些在训练、哪些没用到」，横向滚动明显减少。代价是列的物理顺序与源表不同，需要在使用说明里交代一句；分组表头多占 26px 高度。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= D ================= -->
+  <section class="pane" id="pane-D">
+    <div class="stage">
+      <div class="stage-bg">
+        <div class="ghost-card">
+          <div class="l"></div>
+          <div class="num">96.4<small>%</small></div>
+          <div class="l s"></div>
+          <div class="row"><span>14 天</span><span>AR 产线</span></div>
+        </div>
+      </div>
+      <div class="mask"></div>
+      <div class="drawer" id="dD"></div>
+    </div>
+    <div class="notes">
+      <div class="note">
+        <h4><i></i>做了什么</h4>
+        <p>拆成三步：① 选目标（候选卡带取值范围与空值率）② 选特征（字段卡网格 + 推荐组合）③ 预览确认（只读摘要 + 前 5 行）。每屏只做一件事。</p>
+      </div>
+      <div class="note warn">
+        <h4><i></i>取舍</h4>
+        <p>最符合「核对要慎重」的定位，每一步都能讲清代价，误操作最少。代价是点击从 1 屏变 3 屏，熟练用户会觉得慢；建议保留「跳过，用推荐配置」的后门。</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="pick-note">
+    <b>如果只选一个：</b>取 A 的去重（删大标题、合并提示与图例、表头减到两层）打底，再叠加 C 的「按角色重排 + 只看参与列」——这组合改动集中在一个渲染函数里，但能解决 80% 的杂乱感。B 更适合抽屉常驻、长时间核对的重度场景；D 适合新用户首次核对，可以做成「首次进入向导、之后记忆上次选择」。
+  </div>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var COLS = [
+    {k:'TIME_KEY',        cn:'统计日期',   type:'日期', role:'idx'},
+    {k:'PRODUCT_ID',      cn:'产品编号',   type:'标识', role:'idx'},
+    {k:'TARGET_LAG_1',    cn:'目标前 1 日', type:'数值', role:'num'},
+    {k:'TARGET_LAG_7',    cn:'目标前 7 日', type:'数值', role:'num'},
+    {k:'TARGET_LAG_14',   cn:'目标前 14 日',type:'数值', role:'num'},
+    {k:'ROLLING_MEAN_7',  cn:'7 日均值',   type:'数值', role:'num'},
+    {k:'ROLLING_STD_7',   cn:'7 日波动',   type:'数值', role:'num'},
+    {k:'DAY_OF_WEEK',     cn:'星期几',     type:'类别', role:'num'},
+    {k:'YIELD_RATE',      cn:'AR 综合良率', type:'数值', role:'tgt'},
+    {k:'OUTPUT_QTY',      cn:'投产量',     type:'数值', role:'tgt'},
+    {k:'BR_G_RATE',       cn:'BR 良率',    type:'数值', role:'tgt'}
+  ];
+
+  var ROWS = [
+    ['2026-09-01','ALL_PRODUCTS',95.77,96.37,96.02,96.12,0.31,2,96.20,18240,97.85],
+    ['2026-09-02','ALL_PRODUCTS',96.02,96.31,96.08,96.15,0.28,3,96.44,18096,97.62],
+    ['2026-09-03','ALL_PRODUCTS',96.41,96.28,96.11,96.21,0.26,4,96.37,17988,97.90],
+    ['2026-09-04','ALL_PRODUCTS',96.28,96.44,96.15,96.24,0.24,5,96.52,17850,97.71],
+    ['2026-09-05','ALL_PRODUCTS',96.55,96.39,96.19,96.30,0.23,6,96.48,17520,97.83],
+    ['2026-09-06','ALL_PRODUCTS',96.33,96.52,96.24,96.33,0.22,7,96.61,17380,97.66],
+    ['2026-09-07','ALL_PRODUCTS',96.62,96.41,96.28,96.35,0.21,1,96.44,18410,97.94],
+    ['2026-09-08','ALL_PRODUCTS',96.44,96.58,96.31,96.38,0.20,2,96.57,18305,97.72]
+  ];
+
+  var DEFAULT_FEATURES = ['TARGET_LAG_1','TARGET_LAG_7','ROLLING_MEAN_7'];
+
+  var state = {
+    target:'YIELD_RATE',
+    features: DEFAULT_FEATURES.slice(),
+    help:false,
+    onlyUsed:true,
+    dStep:1
+  };
+
+  function col(k){ for(var i=0;i<COLS.length;i++){ if(COLS[i].k===k) return COLS[i]; } return null; }
+  function has(arr,v){ return arr.indexOf(v)>=0; }
+  function targetCandidates(){ return COLS.filter(function(c){return c.role==='tgt';}); }
+  function featureCandidates(){ return COLS.filter(function(c){return c.role==='num';}); }
+  function idleCandidates(){ return COLS.filter(function(c){return c.role==='idx';}); }
+  function fmt(v){
+    if(typeof v==='number'){ return (Math.round(v*100)/100).toFixed(2); }
+    return v;
+  }
+  function roleOf(k){
+    if(k===state.target) return 'target';
+    if(has(state.features,k)) return 'feat';
+    return 'idle';
+  }
+
+  var ICO_CHECK = '<svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M1.6 5.2 4 7.6l4.4-5" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var ICO_CARET = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2.2 3.9 5 6.7l2.8-2.8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var ICO_X = '<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M3 3l7 7M10 3l-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+
+  /* ---------- 公共片段 ---------- */
+  function drawerHead(subRight){
+    return '<div class="d-head">'+
+      '<div class="d-title"><h2>核对数据与字段</h2><div class="d-sub">AR 综合良率 · 14 天预测</div></div>'+
+      '<div class="d-actions">'+
+        '<button class="linkbtn">返回修改条件</button>'+
+        '<button class="xbtn" aria-label="关闭">'+ICO_X+'</button>'+
+      '</div>'+
+    '</div>';
+  }
+  function metaBar(){
+    return '<div class="meta">'+
+      '<span class="src">ads.ADS_AR_YIELD_DI</span><span class="sep">·</span>'+
+      '<span>2026-07-01 ~ 2026-11-10</span><span class="sep">·</span>'+
+      '<span>全部产品</span>'+
+      '<span class="cnt">119<small>条匹配记录</small></span>'+
+    '</div>';
+  }
+  function tipsBlock(){
+    return '<div class="tips">'+
+      '<button data-act="help" aria-label="怎么选字段">?</button>'+
+      '<div class="pop"'+ (state.help?'':' hidden') +'>'+
+        '<b>怎么选：</b>单击列头把该列设为特征，再点一次取消；点「目标」下拉换预测列。日期与标识列只用于定位记录，不参与训练。'+
+      '</div>'+
+    '</div>';
+  }
+  function chipsRow(){
+    var chips = state.features.length
+      ? state.features.map(function(k){
+          return '<span class="chip">'+k+'<button data-act="rmfeat" data-v="'+k+'" aria-label="移除 '+k+'">×</button></span>';
+        }).join('')
+      : '<span class="empty">还没选特征。点上方列头即可勾选。</span>';
+    return '<div class="picked">'+
+      '<span class="lab">已选 <b class="count" style="color:#0081FF">'+state.features.length+'</b> 个特征</span>'+
+      '<span class="chips">'+chips+'</span>'+
+      '<span class="ops">'+
+        '<button class="linkbtn" data-act="clear">清空</button>'+
+        '<button class="linkbtn" data-act="reco">恢复推荐</button>'+
+      '</span>'+
+    '</div>';
+  }
+  function footerBar(mainLabel){
+    return '<div class="d-foot">'+
+      '<span class="sum">目标 <b style="font-family:Consolas,monospace;color:#303133;font-weight:600">'+state.target+'</b> · 特征 '+state.features.length+' 列</span>'+
+      '<span class="acts">'+
+        '<button class="btn">返回修改条件</button>'+
+        '<button class="btn">保存选择</button>'+
+        '<button class="btn primary">'+(mainLabel||'开始预测')+'</button>'+
+      '</span>'+
+    '</div>';
+  }
+  function pager(totalPage,page){
+    return '<span class="pager">'+
+      '<select><option>10 条 / 页</option><option>20 条 / 页</option></select>'+
+      '<button disabled>‹</button><span>'+(page||1)+' / '+totalPage+'</span><button>›</button>'+
+    '</span>';
+  }
+
+  /* ================= A：去重收敛 ================= */
+  function rowHTML_A(r,i){
+    var s = '<tr><td class="idx">'+(i+1)+'</td>';
+    for(var j=0;j<COLS.length;j++){
+      var c = COLS[j], v = r[j], cls = '';
+      if(c.k===state.target) cls = 'c-target';
+      else if(has(state.features,c.k)) cls = 'c-feat';
+      s += '<td class="'+cls+(typeof v==='number'?' num':'')+'">'+fmt(v)+'</td>';
+    }
+    return s+'</tr>';
+  }
+  function headA(){
+    var s = '<thead><tr><th class="idx">#</th>';
+    for(var i=0;i<COLS.length;i++){
+      var c = COLS[i], k = c.k, r = roleOf(k);
+      var cls = r==='target' ? 'th-target' : r==='feat' ? 'th-feat' : 'th-idle';
+      var label = r==='target' ? '目标' : r==='feat' ? '特征' : (c.role==='idx' ? (c.type==='日期'?'日期':'标识') : '未用');
+      var pick = (c.role==='num' || c.role==='tgt') ? ' pick' : '';
+      var act = c.role==='idx' ? '' : ' data-act="col" data-v="'+k+'"';
+      s += '<th class="'+cls+pick+'"'+act+' title="'+(c.role==='idx'?'索引列，不参与训练':'点击切换特征')+'">'+
+             '<span class="tag-role">'+label+'</span>'+
+             '<span class="ch">'+c.k+'</span>'+
+             '<span class="cm">'+c.cn+' · '+c.type+'</span>'+
+           '</th>';
+    }
+    return s+'</tr></thead>';
+  }
+  function renderA(){
+    var rows = ROWS.map(function(r,i){return rowHTML_A(r,i);}).join('');
+    var body = metaBar() +
+      '<div class="bar">'+
+        '<span class="field-inline">目标列'+
+          '<span class="sel"><select data-act="target">'+
+            targetCandidates().map(function(c){
+              return '<option value="'+c.k+'"'+(c.k===state.target?' selected':'')+'>'+c.k+'（'+c.cn+'）</option>';
+            }).join('')+
+          '</select>'+ICO_CARET+'</span>'+
+        '</span>'+
+        '<span class="grow"></span>'+
+        '<span>点列头勾选特征；目标列用左侧下拉切换</span>'+
+        tipsBlock()+
+      '</div>'+
+      '<div class="tbl-wrap"><table class="grid">'+headA()+'<tbody>'+rows+'</tbody></table></div>'+
+      '<div class="tbl-foot">'+
+        '<span>预览前 50 条 · 表格可左右滚动查看其余列</span>'+
+        '<span class="grow"></span>'+
+        pager(5,1)+
+      '</div>'+
+      chipsRow();
+
+    document.getElementById('dA').innerHTML = drawerHead()+'<div class="d-body">'+body+'</div>'+footerBar();
+  }
+
+  /* ================= B：左栏字段 + 右侧预览 ================= */
+  function fitem(c,kind){
+    var on = kind==='t' ? c.k===state.target : has(state.features,c.k);
+    var dis = c.role==='idx' ? ' dis' : '';
+    var box = kind==='t'
+      ? '<span class="radio"></span>'
+      : (kind==='i' ? '<span class="box" style="background:#F2F4F7;border-color:#E1E5EC"></span>'
+                    : '<span class="box">'+(on?ICO_CHECK:'')+'</span>');
+    var act = c.role==='idx' ? '' : (kind==='t' ? ' data-act="targetset" data-v="'+c.k+'"' : ' data-act="col" data-v="'+c.k+'"');
+    return '<div class="fitem'+(on?' on':'')+dis+'"'+act+'>'+box+
+             '<span class="k">'+c.k+'</span><span class="cn">'+c.cn+'</span>'+
+           '</div>';
+  }
+  function renderB(){
+    var tgt = targetCandidates().map(function(c){return fitem(c,'t');}).join('');
+    var feats = featureCandidates().filter(function(c){return c.k!==state.target;}).map(function(c){return fitem(c,'f');}).join('');
+    var idx = idleCandidates().map(function(c){return fitem(c,'i');}).join('');
+
+    var head = '<thead><tr><th class="idx">#</th>';
+    for(var i=0;i<COLS.length;i++){
+      var c=COLS[i], r=roleOf(c.k);
+      head += '<th class="'+(r==='target'?'th-target':r==='feat'?'th-feat':'th-idle')+'">'+
+                '<span class="ch">'+c.k+'</span><span class="cm">'+c.cn+'</span></th>';
+    }
+    head += '</tr></thead>';
+
+    var rows = ROWS.map(function(r,i){
+      var s='<tr><td class="idx">'+(i+1)+'</td>';
+      for(var j=0;j<COLS.length;j++){
+        var c=COLS[j],v=r[j];
+        s += '<td class="'+(c.k===state.target?'c-target':has(state.features,c.k)?'c-feat':'')+(typeof v==='number'?' num':'')+'">'+fmt(v)+'</td>';
+      }
+      return s+'</tr>';
+    }).join('');
+
+    var body = metaBar()+
+      '<div class="split">'+
+        '<div class="col-panel">'+
+          '<div class="ph"><b>字段</b><span>共 '+COLS.length+' 列</span></div>'+
+          '<div class="grp-h t"><span class="dot"></span>目标<em>1 / '+targetCandidates().length+'</em></div>'+tgt+
+          '<div class="grp-h f"><span class="dot"></span>特征<em>'+state.features.length+' / '+featureCandidates().filter(function(c){return c.k!==state.target;}).length+'</em></div>'+feats+
+          '<div class="grp-h i"><span class="dot"></span>索引（不参与训练）<em>2</em></div>'+idx+
+          '<div class="pf"><span>目标唯一</span><span>特征可多选</span></div>'+
+        '</div>'+
+        '<div class="preview-only">'+
+          '<div class="tbl-wrap"><table class="grid compact">'+head+'<tbody>'+rows+'</tbody></table></div>'+
+          '<div class="tbl-foot">'+
+            '<span>预览前 50 条</span><span class="grow"></span>'+pager(5,1)+
+          '</div>'+
+          '<div class="hint">左栏勾选后，表格对应列高亮；表格本身不可编辑。</div>'+
+        '</div>'+
+      '</div>';
+
+    document.getElementById('dB').innerHTML = drawerHead()+'<div class="d-body">'+body+'</div>'+footerBar();
+  }
+
+  /* ================= C：按角色重排 + 分组表头 ================= */
+  function orderC(){
+    var t = col(state.target);
+    var sel = state.features.map(function(k){return col(k);}).filter(Boolean);
+    var rest = featureCandidates().filter(function(c){return c.k!==state.target && !has(state.features,c.k);});
+    var dateCol = col('TIME_KEY'), idCol = col('PRODUCT_ID');
+    var list = [dateCol, t].concat(sel).concat(rest);
+    if(!state.onlyUsed){ list.push(idCol); }
+    return {list:list, fCount:sel.length, rCount:rest.length, showId:!state.onlyUsed};
+  }
+  function renderC(){
+    var o = orderC(), list = o.list;
+    var grp = '<tr class="grp">'+
+      '<th class="idx">#</th>'+
+      '<th class="g-i">日期</th>'+
+      '<th class="g-t gap">目标</th>';
+    if(o.fCount>0){ grp += '<th class="g-f gap" colspan="'+o.fCount+'">特征（已选 '+o.fCount+'）</th>'; }
+    if(o.rCount>0){ grp += '<th class="g-i gap" colspan="'+o.rCount+'">可选未用</th>'; }
+    grp += (state.onlyUsed ? '' : '<th class="g-i">索引</th>')+'</tr>';
+
+    var head = '<tr><th class="idx"></th>';
+    for(var i=0;i<list.length;i++){
+      var c=list[i], r=roleOf(c.k), isIdx = c.role==='idx';
+      head += '<th class="'+(r==='target'?'th-target':r==='feat'?'th-feat':'th-idle')+(isIdx?'':' pick')+'"'+(isIdx?'':' data-act="col" data-v="'+c.k+'"')+'>'+
+                '<span class="ch">'+c.k+'</span><span class="cm">'+c.cn+'</span></th>';
+    }
+    head += '</tr>';
+
+    var rows = ROWS.map(function(r,i){
+      var s='<tr><td class="idx">'+(i+1)+'</td>';
+      for(var j=0;j<list.length;j++){
+        var c=list[j], v=r[COLS.indexOf(c)];
+        s += '<td class="'+(c.k===state.target?'c-target':has(state.features,c.k)?'c-feat':'')+(typeof v==='number'?' num':'')+'">'+fmt(v)+'</td>';
+      }
+      return s+'</tr>';
+    }).join('');
+
+    var body = metaBar()+
+      '<div class="bar">'+
+        '<span class="field-inline">目标列'+
+          '<span class="sel"><select data-act="target">'+
+            targetCandidates().map(function(c){
+              return '<option value="'+c.k+'"'+(c.k===state.target?' selected':'')+'>'+c.k+'（'+c.cn+'）</option>';
+            }).join('')+
+          '</select>'+ICO_CARET+'</span>'+
+        '</span>'+
+        '<span class="grow"></span>'+
+        '<span class="switch'+(state.onlyUsed?' on':'')+'" data-act="only"><span class="track"></span>只看参与列</span>'+
+        tipsBlock()+
+      '</div>'+
+      '<div class="tbl-wrap"><table class="grid"><thead>'+grp+head+'</thead><tbody>'+rows+'</tbody></table></div>'+
+      '<div class="tbl-foot"><span>列按角色重排：日期 · 目标 → 特征 → 可选 → 索引</span><span class="grow"></span>'+pager(5,1)+'</div>'+
+      chipsRow();
+
+    document.getElementById('dC').innerHTML = drawerHead()+'<div class="d-body">'+body+'</div>'+footerBar();
+  }
+
+  /* ================= D：三步向导 ================= */
+  function stepsHTML(step){
+    var items = ['选目标','选特征','预览确认'];
+    var h = '<div class="steps">';
+    for(var i=0;i<items.length;i++){
+      var cls = (i+1)===step ? ' on' : (i+1)<step ? ' done' : '';
+      h += '<span class="s'+cls+'"><i>'+(i+1<step?'✓':(i+1))+'</i>'+items[i]+'</span>';
+      if(i<items.length-1) h += '<span class="ln"></span>';
+    }
+    return h+'</div>';
+  }
+  function renderD(){
+    var step = state.dStep, body = '', foot = '';
+
+    if(step===1){
+      var rangeMap = {
+        YIELD_RATE:['95.4% ~ 96.8%','空值 0 / 119 条'],
+        OUTPUT_QTY:['17,320 ~ 18,410 片','空值 0 / 119 条'],
+        BR_G_RATE:['97.6% ~ 97.9%','空值 2 / 119 条']
+      };
+      var opts = targetCandidates().map(function(c){
+        var rg = rangeMap[c.k] || ['—','—'];
+        return '<div class="opt'+(c.k===state.target?' on':'')+'" data-act="targetset" data-v="'+c.k+'">'+
+                 '<span class="rd"></span>'+
+                 '<span class="nm">'+c.k+'<span class="cn">'+c.cn+'</span></span>'+
+                 '<span class="mt">'+rg[0]+'<br>'+rg[1]+'</span>'+
+               '</div>';
+      }).join('');
+      body = stepsHTML(1)+
+        '<div class="dsec"><h3>这一步选什么</h3><p>目标列就是你要预测的那一个数字。其余数值列会在下一步作为输入特征。</p>'+
+        '<div class="opt-list">'+opts+'</div></div>'+
+        '<div class="mini-sum" style="margin-top:12px">'+
+          '<div><span>样本区间</span><b>2026-07-01 ~ 11-10</b></div>'+
+          '<div><span>可用记录</span><b>119 条</b></div>'+
+          '<div><span>产品范围</span><b>全部产品</b></div>'+
+          '<div><span>数据来源</span><b>ADS_AR_YIELD_DI</b></div>'+
+        '</div>'+
+        '<div class="warn-line">切换目标会重新计算特征可用性，已勾选的特征会保留能用的部分。</div>';
+      foot = '<div class="d-foot"><span class="sum">第 1 / 3 步</span><span class="acts"><button class="btn">取消</button><button class="btn primary" data-act="dstep" data-v="2">下一步：选特征</button></span></div>';
+    }
+
+    if(step===2){
+      var cards = featureCandidates().filter(function(c){return c.k!==state.target;}).map(function(c){
+        var on = has(state.features,c.k);
+        return '<div class="fcard'+(on?' on':'')+'" data-act="col" data-v="'+c.k+'">'+
+                 '<div class="n">'+c.k+'</div><div class="c">'+c.cn+' · '+c.type+'</div>'+
+                 '<span class="ck">'+(on?ICO_CHECK:'')+'</span>'+
+               '</div>';
+      }).join('');
+      body = stepsHTML(2)+
+        '<div class="dsec"><h3>选输入特征</h3><p>默认给出 3 个相关性最高的列。选得越多不一定越准，同类衍生列重复会互相抵消。</p>'+
+        '<div class="bar" style="margin:0 0 10px"><span class="count">已选 <b>'+state.features.length+'</b> 个</span><span class="grow"></span>'+
+          '<button class="linkbtn" data-act="reco">用推荐组合</button><button class="linkbtn" data-act="clear">全不选</button></div>'+
+        '<div class="cardgrid">'+cards+'</div></div>'+
+        '<div class="warn-line" style="background:#F5F9FF;border-color:#CFE4FB;color:#2D5F8E">TARGET_LAG_7 与 ROLLING_MEAN_7 相关系数 0.94，同时选中会互相稀释，建议只留一个。</div>'+
+        '<div class="tbl-foot"><span>通常 3 ~ 5 个特征已足够；超过 8 个容易过拟合，训练也更慢。</span></div>';
+      foot = '<div class="d-foot"><span class="sum">第 2 / 3 步</span><span class="acts"><button class="btn" data-act="dstep" data-v="1">上一步</button><button class="btn primary" data-act="dstep" data-v="3">下一步：预览</button></span></div>';
+    }
+
+    if(step===3){
+      var head = '<thead><tr><th class="idx">#</th>';
+      var pick = [col('TIME_KEY'), col(state.target)].concat(state.features.map(function(k){return col(k);})).slice(0,6);
+      for(var i=0;i<pick.length;i++){
+        var cls = i===0 ? 'th-idle' : i===1 ? 'th-target' : 'th-feat';
+        head += '<th class="'+cls+'"><span class="ch">'+pick[i].k+'</span><span class="cm">'+pick[i].cn+'</span></th>';
+      }
+      head += '</tr></thead>';
+      var rows = ROWS.slice(0,5).map(function(r,i){
+        var s='<tr><td class="idx">'+(i+1)+'</td>';
+        for(var j=0;j<pick.length;j++){
+          var v = r[COLS.indexOf(pick[j])];
+          s += '<td class="'+(j===0?'':j===1?'c-target':'c-feat')+(typeof v==='number'?' num':'')+'">'+fmt(v)+'</td>';
+        }
+        return s+'</tr>';
+      }).join('');
+
+      body = stepsHTML(3)+
+        '<div class="dsec"><h3>确认后开始训练</h3><p>这一步只做最后核对，字段不再可改。有问题点上一步返回。</p>'+
+        '<div class="mini-sum">'+
+          '<div><span>目标列</span><b>'+state.target+'</b></div>'+
+          '<div><span>特征数</span><b>'+state.features.length+' 列</b></div>'+
+          '<div><span>样本区间</span><b>2026-07-01 ~ 11-10</b></div>'+
+          '<div><span>训练 / 验证</span><b>按时间 8 : 2 切分</b></div>'+
+        '</div></div>'+
+        '<div class="tbl-wrap" style="margin-top:12px"><table class="grid">'+head+'<tbody>'+rows+'</tbody></table></div>'+
+        '<div class="tbl-foot"><span>仅展示前 5 行，实际使用 119 条</span></div>'+
+        '<div class="mini-sum" style="margin-top:12px;grid-template-columns:1fr 1fr">'+
+          '<div><span>训练方式</span><b>按时间顺序，防泄漏</b></div>'+
+          '<div><span>预计耗时</span><b>约 40 秒</b></div>'+
+        '</div>';
+      foot = '<div class="d-foot"><span class="sum">第 3 / 3 步</span><span class="acts"><button class="btn" data-act="dstep" data-v="2">上一步</button><button class="btn primary">开始预测</button></span></div>';
+    }
+
+    document.getElementById('dD').innerHTML = drawerHead()+'<div class="d-body">'+body+'</div>'+foot;
+  }
+
+  function renderAll(){ renderA(); renderB(); renderC(); renderD(); }
+
+  /* ---------- 事件 ---------- */
+  document.addEventListener('click', function(e){
+    var tab = e.target.closest('[data-tab]');
+    if(tab){
+      var id = tab.getAttribute('data-tab');
+      document.querySelectorAll('.tabs button').forEach(function(b){ b.classList.toggle('on', b===tab); });
+      document.querySelectorAll('.pane').forEach(function(p){ p.classList.toggle('on', p.id==='pane-'+id); });
+      return;
+    }
+
+    var el = e.target.closest('[data-act]');
+    if(!el) { if(state.help){ state.help=false; renderAll(); } return; }
+
+    var act = el.getAttribute('data-act'), v = el.getAttribute('data-v');
+
+    if(act==='col'){
+      if(!v) return;
+      var c = col(v);
+      if(!c || c.role==='idx') return;
+      if(c.role==='tgt'){ state.target = v; }
+      else {
+        if(has(state.features,v)) state.features = state.features.filter(function(x){return x!==v;});
+        else state.features.push(v);
+      }
+      // 目标不能同时是特征
+      state.features = state.features.filter(function(x){return x!==state.target;});
+    }
+    else if(act==='targetset'){ state.target = v; state.features = state.features.filter(function(x){return x!==v;}); }
+    else if(act==='rmfeat'){ state.features = state.features.filter(function(x){return x!==v;}); }
+    else if(act==='clear'){ state.features = []; }
+    else if(act==='reco'){ state.features = DEFAULT_FEATURES.filter(function(k){return k!==state.target;}); }
+    else if(act==='help'){ state.help = !state.help; e.stopPropagation(); }
+    else if(act==='only'){ state.onlyUsed = !state.onlyUsed; }
+    else if(act==='dstep'){ state.dStep = Number(v); state.help = false; }
+    else { return; }
+
+    renderAll();
+  });
+
+  document.addEventListener('change', function(e){
+    if(e.target.matches('[data-act="target"]')){
+      state.target = e.target.value;
+      state.features = state.features.filter(function(x){return x!==state.target;});
+      renderAll();
+    }
+  });
+
+  renderAll();
+})();
+</script>
+</body>
+</html>

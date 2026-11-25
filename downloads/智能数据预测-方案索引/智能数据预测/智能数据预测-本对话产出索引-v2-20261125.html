@@ -1,0 +1,1498 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>文件不迷路（智能数据预测）· 产出索引 · 层叠 2</title>
+<style>
+  :root{
+    --b1:#EAF4FF; --b2:#D6EAFF; --b6:#0081FF; --b7:#0072E3;
+    --n1:#F7F9FC; --n2:#EFF2F6; --n3:#E3E8EF; --n4:#C9D2DD; --n5:#9AA6B4;
+    --n6:#6E7B8B; --n7:#4E5A68; --n8:#303133;
+    --page:#F5F7FA; --card:#FFFFFF;
+    --r:12px;
+    --shadow:0 1px 2px rgba(48,49,51,.04);
+    --shadow-h:0 10px 26px rgba(0,129,255,.10);
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%; scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--page); color:var(--n8);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    font-size:14px; line-height:1.6; -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit; text-decoration:none}
+  .wrap{width:100%; max-width:1080px; margin:0 auto; padding:0 24px}
+
+  /* ---------- 头部 ---------- */
+  .topbar{
+    background:#FFF;
+    background-image:linear-gradient(180deg,#F4F9FF 0%,#FFFFFF 78%);
+    border-bottom:1px solid var(--n3);
+  }
+  .topbar .wrap{padding-top:26px; padding-bottom:22px}
+  .crumb{display:flex; align-items:center; gap:8px; color:var(--n5); font-size:12px}
+  .crumb i{font-style:normal; color:var(--n4)}
+  .topbar h1{margin:10px 0 0; font-size:24px; line-height:34px; font-weight:600; letter-spacing:-.01em}
+  /* 项目名：括号内跟随标题，弱化为辅助层级 */
+  .topbar h1 .proj{font-size:16px; line-height:22px; font-weight:500; letter-spacing:0;
+    color:var(--n6); margin-left:-.3em}
+  .topbar .sub{margin:8px 0 0; color:var(--n6); font-size:13px; line-height:22px}
+  .quick{display:flex; flex-wrap:wrap; gap:10px; margin-top:18px}
+  .qbtn{
+    display:inline-flex; align-items:center; gap:7px; height:36px; padding:0 16px;
+    border:1px solid var(--n3); border-radius:8px; background:#FFF; color:var(--n7);
+    font-size:13px; font-weight:500; transition:border-color .15s,color .15s,background .15s;
+  }
+  .qbtn:hover{border-color:var(--b6); color:var(--b7); background:#F7FBFF}
+  .qbtn.primary{border-color:var(--b6); background:var(--b6); color:#FFF}
+  .qbtn.primary:hover{background:var(--b7); border-color:var(--b7); color:#FFF}
+  .qbtn svg{display:block; width:14px; height:14px}
+
+  /* ---------- 右侧锚点 ---------- */
+  .rail{
+    position:fixed; right:18px; top:50%; transform:translateY(-50%); z-index:20;
+    display:flex; flex-direction:column; gap:2px;
+  }
+  .rail a{
+    display:flex; align-items:center; justify-content:flex-start; gap:9px;
+    height:26px; padding:0 8px 0 12px; border-radius:6px;
+    color:var(--n5); font-size:11.5px; white-space:nowrap;
+    transition:color .14s, background .14s;
+  }
+  .rail a .rn{font-size:10.5px; letter-spacing:.04em; font-variant-numeric:tabular-nums}
+  .rail a .rt{display:none; font-size:12px}
+  .rail:hover a .rt{display:inline}
+  @media (min-width:1320px){ .rail a .rt{display:inline} }
+  .rail:hover{
+    background:#FFF; border-radius:10px; padding:6px 0;
+    box-shadow:0 0 0 1px var(--n3), 0 8px 24px rgba(48,49,51,.10);
+  }
+  .rail a:hover{color:var(--b7); background:#F2F8FF}
+  .rail a.on{color:var(--b6); background:#EAF4FF}
+  .rail a.on .rn, .rail a.on .rt{font-weight:600}
+  @media (max-width:1219px){ .rail{display:none} }
+
+  /* ---------- 分区 ---------- */
+  main{padding:46px 0 10px}
+  section{margin-bottom:40px; scroll-margin-top:24px}
+  .shead{display:flex; align-items:baseline; gap:10px; margin-bottom:4px}
+  .shead .no{
+    flex:0 0 auto; font-size:12px; font-weight:600; color:var(--b6);
+    font-variant-numeric:tabular-nums; letter-spacing:.04em;
+  }
+  .shead h2{margin:0; font-size:17px; line-height:26px; font-weight:600}
+  .shead .count{
+    margin-left:2px; padding:0 6px; border-radius:4px; background:var(--n2);
+    color:var(--n6); font-size:11px; line-height:18px; font-weight:500;
+  }
+  .sdesc{margin:0 0 16px 26px; color:var(--n6); font-size:12.5px; line-height:20px}
+
+  /* ---------- 二级分类（其他文件） ---------- */
+  .subgroup+.subgroup{margin-top:28px}
+  .subhead{display:flex; align-items:center; gap:8px; margin:0 0 8px;
+    padding-bottom:9px; border-bottom:1px solid var(--n2)}
+  .subhead h3{margin:0; font-size:14px; line-height:22px; font-weight:600; color:var(--n8)}
+  .subhead h3::before{content:""; display:inline-block; width:3px; height:12px;
+    margin-right:8px; border-radius:2px; background:var(--b6); vertical-align:-1px}
+  .subhead .scount{padding:0 6px; border-radius:4px; background:var(--n2);
+    color:var(--n6); font-size:11px; line-height:18px; font-weight:500}
+  .subdesc{margin:0 0 12px; color:var(--n6); font-size:12px; line-height:19px}
+
+  /* ---------- 可折叠分区 ---------- */
+  section.collapsible .shead{cursor:pointer; user-select:none}
+  section.collapsible .shead:focus-visible{outline:2px solid var(--b6); outline-offset:2px; border-radius:6px}
+  section.collapsible .shead .chev{
+    align-self:center; margin-left:auto; flex:0 0 auto;
+    width:22px; height:22px; border-radius:5px;
+    display:inline-flex; align-items:center; justify-content:center;
+    color:var(--n5);
+    transition:transform .2s ease, background .15s, color .15s;
+  }
+  section.collapsible .shead:hover .chev{background:var(--n1); color:var(--n7)}
+  section.collapsible.open .shead .chev{transform:rotate(180deg)}
+  section.collapsible .sec-body{display:grid; grid-template-rows:0fr; transition:grid-template-rows .32s ease}
+  section.collapsible.open .sec-body{grid-template-rows:1fr}
+  section.collapsible .sec-body>.sec-inner{overflow:hidden; min-height:0}
+
+  /* ---------- 模块分组（02 区） ---------- */
+  .mods{display:flex; flex-direction:column; gap:10px}
+  .mod{border:1px solid var(--n3); border-radius:var(--r); background:var(--card);
+    box-shadow:var(--shadow); overflow:hidden;
+    transition:border-color .18s, box-shadow .18s}
+  .mod:hover{border-color:var(--n4)}
+  .mod.open{border-color:var(--b6); box-shadow:var(--shadow-h)}
+  .mod-head{display:flex; align-items:center; gap:10px; width:100%;
+    padding:13px 16px; background:none; border:0; cursor:pointer;
+    text-align:left; font:inherit; color:inherit; user-select:none}
+  .mod-head:focus-visible{outline:2px solid var(--b6); outline-offset:-2px}
+  .mod-head .mchev{flex:0 0 auto; width:20px; height:20px; border-radius:5px;
+    display:inline-flex; align-items:center; justify-content:center; color:var(--n5);
+    transition:transform .22s ease, background .15s, color .15s}
+  .mod-head:hover .mchev{background:var(--n1); color:var(--n7)}
+  .mod.open .mod-head .mchev{transform:rotate(180deg); color:var(--b6)}
+  .mod-ico{flex:0 0 auto; color:var(--n5); transition:color .18s}
+  .mod.open .mod-ico{color:var(--b6)}
+  .mod-head b{font-size:14px; line-height:22px; font-weight:600; color:var(--n8)}
+  .mod-head .cnt{flex:0 0 auto; padding:0 6px; border-radius:4px; background:var(--n2);
+    color:var(--n6); font-size:11px; line-height:18px; font-weight:500}
+  .mod.open .mod-head .cnt{background:var(--b1); color:var(--b7)}
+  .mod-head .mstatus{margin-left:auto; flex:0 0 auto}
+  .mod-body{display:grid; grid-template-rows:0fr;
+    transition:grid-template-rows .34s cubic-bezier(.2,.7,.3,1)}
+  .mod.open .mod-body{grid-template-rows:1fr}
+  .mod-inner{overflow:hidden; min-height:0}
+  .frows{margin:0 12px 12px 46px; padding:2px 0 2px 16px;
+    border-left:2px solid var(--n3); display:flex; flex-direction:column; gap:2px;
+    transition:border-color .25s}
+  .mod.open .frows{border-left-color:var(--b1)}
+  .frow{display:block; padding:10px 12px; border-radius:8px;
+    text-decoration:none; color:inherit; transition:background .14s}
+  .frow:hover{background:var(--n1)}
+  .frow .fr-top{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+  .frow .fr-top b{font-size:13px; line-height:20px; font-weight:600; color:var(--n8); word-break:break-all}
+  .frow .fr-top .size{margin-left:auto; color:var(--n5); font-size:11px;
+    font-variant-numeric:tabular-nums; white-space:nowrap}
+  .frow p{margin:5px 0 0; color:var(--n6); font-size:12px; line-height:19px}
+  .frow p strong{font-weight:600; color:var(--n7)}
+  @media (prefers-reduced-motion: no-preference){
+    .mod.open .frow{animation:rowIn .32s ease both; animation-delay:calc(var(--i)*55ms)}
+    @keyframes rowIn{from{opacity:0; transform:translateY(7px)} to{opacity:1; transform:none}}
+  }
+  @media (max-width:760px){
+    .frows{margin-left:14px}
+    .mod-head .mstatus{display:none}
+  }
+
+  /* ---------- 文件夹卡片（02 区） ---------- */
+  .mods{display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:14px}
+  .mod{position:relative}
+  .folder{display:block; width:100%; padding:14px 14px 12px; background:none; border:0;
+    cursor:pointer; text-align:left; font:inherit; color:inherit; user-select:none}
+  .folder:focus-visible{outline:2px solid var(--b6); outline-offset:-2px; border-radius:var(--r)}
+  .shots{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+  .shot{position:relative; display:block; border-radius:8px; background:var(--n1);
+    aspect-ratio:16/10; overflow:hidden; text-decoration:none; color:inherit;
+    transition:box-shadow .16s}
+  .shot img{width:100%; height:100%; object-fit:cover; object-position:top left; display:block;
+    transition:transform .3s ease}
+  a.shot:hover{box-shadow:0 0 0 2px var(--b6)}
+  a.shot:hover img{transform:scale(1.04)}
+  .shot.empty{border:1.5px dashed var(--n4); background:transparent}
+  .shot.more{display:flex; align-items:center; justify-content:center;
+    background:var(--n1); color:var(--n6); font-size:12px; font-weight:500;
+    border:1.5px dashed var(--n4); cursor:default}
+  .fbar{display:flex; align-items:center; gap:9px; margin-top:12px}
+  .fbar .fico{flex:0 0 auto; color:#F7B500; display:flex}
+  .mod.open .fbar .fico{color:#EFA900}
+  .fbar b{font-size:13.5px; line-height:20px; font-weight:600; color:var(--n8)}
+  .fbar .fnum{margin-left:auto; flex:0 0 auto; display:flex; align-items:center; gap:8px;
+    color:var(--n5); font-size:12px; font-variant-numeric:tabular-nums}
+  .fbar .fnum .mchev{width:16px; height:16px}
+  .mod.open .fbar .fnum .mchev{transform:rotate(180deg); color:var(--b6)}
+  .mod-head{display:none}
+  .mod .mod-body{margin-top:2px}
+  .mod .frows{margin:2px 12px 12px 16px; border-left-color:var(--n3)}
+  @media (max-width:760px){ .mods{grid-template-columns:1fr} }
+  /* ---------- 主稿卡片（01 区，左右分栏） ---------- */
+  .file.hero-card{flex-direction:row; align-items:stretch; gap:16px; padding:14px}
+  .hero-shot{flex:0 0 40%; max-width:400px; border:1px solid var(--n3); border-radius:8px;
+    overflow:hidden; background:var(--n1); aspect-ratio:16/10}
+  .hero-shot img{width:100%; height:100%; object-fit:cover; object-position:top left; display:block;
+    transition:transform .3s ease}
+  .file.hero-card:hover .hero-shot img{transform:scale(1.02)}
+  .hero-info{flex:1 1 auto; min-width:0; display:flex; flex-direction:column}
+  .hero-info .fmeta{margin-top:auto}
+  @media (max-width:760px){
+    .file.hero-card{flex-direction:column}
+    .hero-shot{flex:none; width:100%; max-width:none}
+  }
+
+  /* ---------- 文件卡片 ---------- */
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:12px}
+  .grid.one{grid-template-columns:1fr}
+  .file{
+    display:flex; flex-direction:column; min-width:0;
+    padding:14px 16px; border:1px solid var(--n3); border-radius:var(--r);
+    background:var(--card); box-shadow:var(--shadow);
+    transition:border-color .16s, box-shadow .16s, transform .16s;
+  }
+  .file:hover{border-color:var(--b6); box-shadow:var(--shadow-h); transform:translateY(-1px)}
+  .file .fhead{display:flex; align-items:center; gap:8px; margin-bottom:9px}
+  .ext{
+    padding:0 6px; border-radius:4px; background:var(--b1); color:var(--b7);
+    font-size:10px; font-weight:600; line-height:18px; letter-spacing:.03em;
+  }
+  .ext.txt{background:#F3F0FF; color:#6A54D8}
+  .ext.web{background:#E9F7EF; color:#1D8A52}
+  .file .size{margin-left:auto; color:var(--n5); font-size:11px; font-variant-numeric:tabular-nums}
+  .ver{
+    padding:0 6px; border-radius:4px; background:#F4F5F7; color:var(--n5);
+    font-size:10.5px; line-height:18px; font-weight:500;
+  }
+  .ver.on{background:#E9F7EF; color:#1D8A52}
+  .file b{
+    display:block; color:var(--n8); font-size:13.5px; line-height:20px; font-weight:600;
+    word-break:break-all;
+  }
+  .file small{display:block; margin-top:5px; color:var(--n6); font-size:12px; line-height:19px}
+  .file small strong{font-weight:600; color:var(--n7)}
+  .file small code, .tl-body code, footer code{
+    padding:0 4px; border-radius:3px; background:var(--n1); border:1px solid var(--n3);
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11px; color:var(--n6);
+    word-break:break-all;
+  }
+  .file .fmeta{
+    display:flex; flex-wrap:wrap; align-items:center; gap:6px 8px; margin-top:12px; padding-top:10px;
+    border-top:1px dashed var(--n3); color:var(--n5); font-size:11px;
+    font-variant-numeric:tabular-nums;
+  }
+  .file .fmeta>span{flex:0 0 auto; white-space:nowrap}
+  .file .fmeta .tag{
+    padding:0 6px; border-radius:3px; background:var(--n1); color:var(--n6);
+    line-height:17px; font-size:10.5px; white-space:nowrap;
+  }
+  .file .fmeta .tag.blue{background:var(--b1); color:var(--b7)}
+  .file .fmeta .tag.green{background:#E9F7EF; color:#1D8A52}
+  .file .fmeta .tag.gray{background:#F4F5F7; color:var(--n5)}
+  .path{
+    margin-top:10px; padding:7px 9px; border-radius:6px; background:var(--n1);
+    color:var(--n6); font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:11px; line-height:17px; word-break:break-all;
+  }
+  /* 在线链接的地址过长时单行省略，不用把 ID 尾巴折到第二行 */
+  .file[href^="http"] .path{white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+
+  /* ---------- 版本轨迹：按天分组 ---------- */
+  .daygroup{display:flex; gap:20px; padding:16px 0; border-bottom:1px dashed var(--n3)}
+  .daygroup:first-child{padding-top:0}
+  .daygroup:last-child{border-bottom:0; padding-bottom:0}
+  .dg-left{flex:0 0 90px}
+  .dg-left b{display:block; color:var(--n8); font-size:13px; font-weight:600; font-variant-numeric:tabular-nums}
+  .dg-left span{display:block; margin-top:2px; color:var(--n5); font-size:11px; font-variant-numeric:tabular-nums}
+  .dg-body{flex:1; min-width:0}
+  .dg-body p{margin:0 0 10px; color:var(--n6); font-size:12.5px; line-height:20px}
+  .dg-body p b{color:var(--n7); font-weight:600}
+  .snaps{display:flex; flex-wrap:wrap; gap:6px}
+  .snaps a{
+    display:inline-flex; align-items:center; gap:6px; padding:2px 8px;
+    border:1px solid var(--n3); border-radius:5px; background:var(--n1);
+    color:var(--n6); font-size:11px; line-height:18px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    transition:border-color .14s,color .14s,background .14s;
+  }
+  .snaps a:hover{border-color:var(--b6); color:var(--b7); background:#F7FBFF}
+  .snaps a em{font-style:normal; color:var(--n4); font-size:10.5px}
+  .snaps a.now{border-color:var(--b6); color:var(--b7); background:#F4F9FF}
+
+  /* ---------- 时间轴（旧样式，保留给一句话结论用） ---------- */
+  .timeline{position:relative; margin:0 0 18px 8px; padding-left:22px}
+  .timeline::before{
+    content:""; position:absolute; left:5px; top:6px; bottom:8px; width:1px; background:var(--n3);
+  }
+  .tl-item{position:relative; padding:0 0 16px 0}
+  .tl-item:last-child{padding-bottom:0}
+  .tl-item::before{
+    content:""; position:absolute; left:-21px; top:5px; width:9px; height:9px;
+    border-radius:50%; background:#FFF; border:2px solid var(--n4);
+  }
+  .tl-item.done::before{border-color:var(--b6); background:var(--b6)}
+  .tl-item.now::before{border-color:var(--b6); background:#FFF; box-shadow:0 0 0 4px rgba(0,129,255,.14)}
+  .tl-time{color:var(--n5); font-size:11px; font-variant-numeric:tabular-nums}
+  .tl-body{margin-top:2px}
+  .tl-body b{font-size:13px; font-weight:600; color:var(--n8)}
+  .tl-body p{margin:3px 0 0; color:var(--n6); font-size:12px; line-height:19px}
+  .tl-snap{
+    display:inline-block; margin-top:6px; padding:1px 7px; border-radius:4px;
+    background:var(--n1); border:1px solid var(--n3); color:var(--n6);
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11px;
+  }
+  .tl-snap:hover{border-color:var(--b6); color:var(--b7); background:#F7FBFF}
+
+  /* ---------- 提示条 ---------- */
+  .note{
+    display:flex; gap:10px; padding:12px 14px; border-radius:10px;
+    background:#FFFBE9; border:1px solid #F3E3B0; color:#7A6114; font-size:12.5px; line-height:20px;
+  }
+  .note.blue{background:#F4F9FF; border-color:#D6EAFF; color:#1A5FA8}
+  .note svg{flex:0 0 15px; width:15px; height:15px; margin-top:2px}
+
+
+  @media (max-width:760px){
+    .topbar h1{font-size:20px; line-height:30px}
+    .topbar h1 .proj{font-size:14px; line-height:20px}
+    .grid{grid-template-columns:1fr}
+    .sdesc{margin-left:0}
+    .daygroup{flex-direction:column; gap:8px}
+    .dg-left{flex:0 0 auto; display:flex; align-items:baseline; gap:8px}
+  }
+
+  .topbar h1 .vchip{display:inline-flex; align-items:center; height:22px; margin-left:10px;
+    padding:0 8px; border:1px solid var(--b2); border-radius:6px; background:var(--b1);
+    color:var(--b7); font-size:11px; font-weight:600; letter-spacing:.02em; vertical-align:4px}
+  /* ============================================================
+     层叠 2：纸片层叠 + 点击向上扇形展开 + 蒙层（与方案页同一套）
+     ============================================================ */
+  .d-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:16px;
+    align-items:start}
+  .d-stack{position:relative; min-width:0; padding-top:20px; cursor:pointer}
+  .d-back{position:absolute; height:28px; border-radius:var(--r); border:1px solid var(--n4);
+    background:#FFF; box-shadow:0 1px 3px rgba(48,49,51,.06);
+    transition:transform .26s cubic-bezier(.2,.7,.3,1), opacity .22s}
+  .d-back.b1{top:9px; left:12px; right:12px; z-index:1}
+  .d-back.b2{top:2px; left:24px; right:24px; z-index:0; background:#FAFBFD}
+  .d-stack:hover .d-back.b1{transform:translateY(-3px)}
+  .d-stack:hover .d-back.b2{transform:translateY(-6px)}
+  .d-stack.is-open .d-back{opacity:0}
+
+  .d-card{position:relative; z-index:2; border:1px solid var(--n3); border-radius:var(--r);
+    background:var(--card); box-shadow:var(--shadow); overflow:hidden;
+    transition:border-color .18s, box-shadow .18s, opacity .18s}
+  .d-card:hover{border-color:var(--b6); box-shadow:var(--shadow-h)}
+  .d-stack.is-open .d-card{opacity:0; pointer-events:none}
+  .d-stack.is-multi{cursor:pointer}
+
+  /* 主图：当前版本，点它直接打开文件 */
+  .hero{display:block; position:relative; overflow:hidden; background:var(--n1);
+    aspect-ratio:16/10; border-bottom:1px solid var(--n2)}
+  .hero img{width:100%; height:100%; object-fit:cover; object-position:top left; display:block;
+    transition:transform .42s cubic-bezier(.2,.7,.3,1)}
+  .d-card:hover .hero img{transform:scale(1.02)}
+  .hero .cap{position:absolute; left:9px; top:9px; display:inline-flex; align-items:center;
+    height:20px; padding:0 7px; border-radius:5px; background:rgba(48,49,51,.82); color:#FFF;
+    font-size:10px; font-weight:600; letter-spacing:.02em; font-variant-numeric:tabular-nums;
+    -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px)}
+  /* 无缩略图的文件：文档轮廓 + 扩展名，保持同样的 16:10 版位 */
+  .hero.plain{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:9px;
+    background:linear-gradient(158deg,#FAFBFD 0%,#F1F4F8 100%)}
+  .hero.plain .dico{display:block; width:26px; height:26px; color:var(--n4)}
+  .hero.plain .dico svg{display:block; width:100%; height:100%}
+  .hero.plain .dext{font-size:11px; line-height:15px; font-weight:600; letter-spacing:.11em;
+    color:var(--n5); font-variant-numeric:tabular-nums}
+
+  .d-sub{margin:9px 14px 0; color:var(--n6); font-size:11.5px; line-height:18px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+
+  .d-bar{display:flex; align-items:center; gap:6px; width:100%; padding:10px 14px 11px;
+    background:none; border:0; font:inherit; color:inherit; text-align:left;
+    text-decoration:none; cursor:pointer; transition:background .15s}
+  .d-bar:hover{background:var(--n1)}
+  .d-bar b{flex:1 1 auto; font-size:13px; line-height:20px; font-weight:600; color:var(--n8);
+    min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .d-bar .pill{flex:0 0 auto}
+  .d-bar .dm{margin-left:auto; flex:0 0 auto; color:var(--n5); font-size:11px;
+    font-variant-numeric:tabular-nums}
+  .d-bar .dchev{flex:0 0 auto; width:18px; height:18px; border-radius:4px;
+    display:inline-flex; align-items:center; justify-content:center; color:var(--n5);
+    transition:transform .24s cubic-bezier(.2,.7,.3,1), color .15s, background .15s}
+  .d-bar:hover .dchev{color:var(--b7); background:var(--b1)}
+  .d-bar .dopen{flex:0 0 auto; display:inline-flex; align-items:center; color:var(--b7)}
+
+  .pill{display:inline-flex; align-items:center; height:19px; padding:0 6px; border-radius:5px;
+    font-size:10.5px; font-weight:500; line-height:1; white-space:nowrap}
+  .pill.blue{background:var(--b1); color:var(--b7)}
+  .pill.green{background:#E9F7EE; color:#1D8A52}
+  .pill.gray{background:var(--n2); color:var(--n6)}
+
+  /* ---------- 浮层：蒙层 + 卡片副本 + 扇形层 ---------- */
+  .dfan{position:fixed; inset:0; z-index:120; display:none}
+  .dfan.in{display:block}
+  html.dfan-lock{overflow:hidden}
+  html.dfan-lock body{padding-right:var(--dfan-sb,0px)}
+
+  .dfan-veil{position:absolute; inset:0; background:rgba(40,44,52,.38); opacity:0;
+    -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px);
+    transition:opacity .26s ease}
+  .dfan.on .dfan-veil{opacity:1}
+
+  .dfan-folder{position:absolute; z-index:60; transform-origin:top center;
+    transition:transform .40s cubic-bezier(.2,.7,.3,1)}
+  .dfan-folder .d-card{box-shadow:0 26px 60px rgba(48,49,51,.28)}
+  .dfan-folder .d-bar{cursor:default}
+  .dfan-folder .d-bar:hover{background:none}
+  .dfan-folder .dchev{transform:rotate(180deg)}
+
+  /* 扇形层：以纸片顶端中点为圆心，按弧线切线角度倾斜 */
+  .dfan-fan{position:absolute; left:0; top:0; width:0; height:0; pointer-events:none}
+  .dfan-item{position:absolute; left:0; top:0; width:var(--w); display:block;
+    text-decoration:none; pointer-events:auto; opacity:0;
+    transform:translate(-50%,-50%) translate(0,-4px) rotate(0deg) scale(.9);
+    transition:transform .48s cubic-bezier(.2,.7,.3,1), opacity .26s ease}
+  .dfan.on .dfan-item{opacity:1; transition-delay:var(--d,0s);
+    transform:translate(-50%,-50%) translate(var(--x),var(--y)) rotate(var(--rot)) scale(1)}
+  .dfan-item:hover,.dfan-item:focus-visible{z-index:900 !important; outline:none}
+  .dfan-in{position:relative; display:block; padding:6px 6px 7px; border:1px solid var(--n3);
+    border-radius:10px; background:#FFF; box-shadow:0 8px 22px rgba(48,49,51,.18);
+    transition:transform .2s cubic-bezier(.2,.7,.3,1), box-shadow .2s, border-color .2s}
+  .dfan-item:hover .dfan-in,.dfan-item:focus-visible .dfan-in{transform:translateY(-5px);
+    border-color:var(--b6); box-shadow:0 18px 34px rgba(48,49,51,.22)}
+  .dfan-shot{position:relative; display:block; aspect-ratio:16/10; border-radius:5px;
+    overflow:hidden; background:var(--n1); border:1px solid var(--n2)}
+  .dfan-shot img{width:100%; height:100%; object-fit:cover; object-position:top left; display:block}
+  .dfan-shot.noimg{display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(158deg,#FAFBFD 0%,#F1F4F8 100%)}
+  .dfan-shot.noimg .dext{font-size:12px; font-weight:600; letter-spacing:.05em; color:var(--n5)}
+  .dfan-v{position:absolute; left:5px; bottom:5px; padding:0 5px; border-radius:4px;
+    background:rgba(48,49,51,.84); color:#FFF; font-size:9.5px; line-height:15px; font-weight:600;
+    font-variant-numeric:tabular-nums}
+  .dfan-meta{display:flex; align-items:center; gap:6px; padding:6px 1px 0}
+  .dfan-t{flex:1 1 auto; min-width:0; color:var(--n7); font-size:11px; line-height:15px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .dfan-d{flex:0 0 auto; color:var(--n5); font-size:10px; font-variant-numeric:tabular-nums}
+
+  /* 更多版本：扇面封顶后，末位换成入口卡 */
+  .dfan-item.more{border:0; padding:0; background:none; font:inherit; cursor:pointer}
+  .dfan-item.more .dfan-in{display:block; background:#FFF; border-style:dashed;
+    border-color:rgba(0,129,255,.46); box-shadow:0 6px 18px rgba(48,49,51,.08)}
+  .dfan-item.more:hover .dfan-in{background:var(--b1); border-color:var(--b6);
+    box-shadow:0 16px 30px rgba(48,49,51,.18)}
+  .dfan-morebox{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
+    height:calc(var(--w) * .625 + 21px)}
+  .dfan-morebox b{font-size:19px; line-height:24px; font-weight:600; color:var(--b7);
+    font-variant-numeric:tabular-nums; letter-spacing:-.01em}
+  .dfan-morebox i{font-style:normal; font-size:10.5px; line-height:14px; color:var(--n5)}
+
+  /* 删除：右上角关闭钮，略微越出卡片边界（悬停/聚焦时出现） */
+  .dfan-x{position:absolute; right:-8px; top:-8px; width:20px; height:20px; z-index:3;
+    display:flex; align-items:center; justify-content:center; border-radius:50%;
+    background:#FFF; color:var(--n7); border:1px solid var(--n4);
+    box-shadow:0 3px 9px rgba(48,49,51,.24); cursor:pointer;
+    opacity:0; transform:scale(.86);
+    transition:opacity .16s, transform .16s, color .15s, border-color .15s, background .15s}
+  .dfan-item:hover .dfan-x,.dfan-item:focus-within .dfan-x{opacity:1; transform:none}
+  .dfan-x:hover{color:var(--n8); border-color:var(--n4); background:#FFF}
+  .dfan-x:focus-visible{opacity:1; outline:2px solid var(--b6); outline-offset:1px}
+  .dfan-x svg{width:11px; height:11px; display:block}
+  @media (hover:none){ .dfan-x{opacity:1; transform:none} }
+  .dfan-item.out{opacity:0 !important; pointer-events:none; transition:opacity .16s ease !important}
+  .dfan-item.out .dfan-in{transform:scale(.9)}
+  .dfan-item.settled{opacity:1 !important; transition:none !important}
+  .dfan-empty{position:absolute; left:0; top:0; white-space:nowrap;
+    transform:translate(-50%,-100%) translateY(-10px);
+    color:var(--n6); font-size:12px; line-height:18px}
+
+  /* 撤回条：删除后浮出，点一次撤回一个 */
+  .dfan-undo{position:fixed; left:50%; bottom:26px; z-index:3;
+    display:flex; align-items:center; gap:10px; padding:9px 10px 9px 14px;
+    background:rgba(48,49,51,.94); color:#FFF; border-radius:10px; font-size:12px; line-height:18px;
+    box-shadow:0 12px 30px rgba(30,34,40,.28); opacity:0; pointer-events:none;
+    transform:translate(-50%, 10px);
+    transition:opacity .2s ease, transform .24s cubic-bezier(.2,.7,.3,1)}
+  .dfan-undo.on{opacity:1; pointer-events:auto; transform:translate(-50%, 0)}
+  .dfan-undo .du-t{color:rgba(255,255,255,.84); font-variant-numeric:tabular-nums}
+  .dfan-undo .du-t b{color:#FFF; font-weight:600}
+  .dfan-undo .du-n{color:rgba(255,255,255,.48); font-size:11px}
+  .dfan-undo .du-b{height:26px; padding:0 12px; border:0; border-radius:6px; cursor:pointer;
+    background:var(--b6); color:#FFF; font:inherit; font-size:12px; font-weight:500}
+  .dfan-undo .du-b:hover{background:var(--b7)}
+
+  /* 删除二次确认 */
+  .dfan-dlg{position:absolute; inset:0; z-index:320; display:none}
+  .dfan-dlg.in{display:block}
+  .dfan-dlg-mask{position:absolute; inset:0; background:rgba(28,31,36,.30);
+    opacity:0; transition:opacity .18s ease}
+  .dfan-dlg.on .dfan-dlg-mask{opacity:1}
+  .dfan-dlg-card{position:absolute; left:50%; top:50%; width:340px; max-width:calc(100vw - 40px);
+    padding:20px 20px 16px; background:#FFF; border-radius:12px; outline:none;
+    box-shadow:0 24px 56px rgba(24,28,34,.28);
+    opacity:0; transform:translate(-50%,-50%) scale(.96);
+    transition:opacity .18s ease, transform .22s cubic-bezier(.2,.7,.3,1)}
+  .dfan-dlg.on .dfan-dlg-card{opacity:1; transform:translate(-50%,-50%) scale(1)}
+  .dfan-dlg-card h4{margin:0; font-size:14px; line-height:22px; font-weight:600; color:var(--n8);
+    font-variant-numeric:tabular-nums}
+  .dfan-dlg-card p{margin:7px 0 0; color:var(--n6); font-size:12.5px; line-height:20px}
+  .dfan-dlg-a{display:flex; justify-content:flex-end; gap:8px; margin-top:18px}
+  .dfan-dlg-a button{height:32px; padding:0 16px; border-radius:8px; font:inherit; font-size:12.5px;
+    font-weight:500; cursor:pointer; border:1px solid var(--n3); background:#FFF; color:var(--n7);
+    transition:border-color .15s, color .15s, background .15s}
+  .dfan-dlg-a button:hover{border-color:var(--n4); color:var(--n8)}
+  .dfan-dlg-a button:focus-visible{outline:2px solid var(--b6); outline-offset:2px}
+  .dfan-dlg-a .dlg-ok{background:#D54941; border-color:#D54941; color:#FFF}
+  .dfan-dlg-a .dlg-ok:hover{background:#BE3A33; border-color:#BE3A33; color:#FFF}
+
+  /* 全量版本清单：浮层内的可滚动列表 */
+  .dfan-sheet{position:absolute; left:0; top:0; width:var(--sw,520px); max-height:var(--sh,320px);
+    display:flex; flex-direction:column; overflow:hidden; background:#FFF;
+    border:1px solid var(--n3); border-radius:12px; box-shadow:0 26px 60px rgba(48,49,51,.26);
+    opacity:0; pointer-events:none;
+    transform:translate(calc(-50% + var(--sx,0px)), calc(-100% - 14px)) translateY(6px);
+    transition:opacity .22s ease, transform .26s cubic-bezier(.2,.7,.3,1)}
+  .dfan-fan.list .dfan-sheet{opacity:1; pointer-events:auto;
+    transform:translate(calc(-50% + var(--sx,0px)), calc(-100% - 14px))}
+  .dfan-fan.list.sd .dfan-sheet{transform:translate(calc(-50% + var(--sx,0px)), 12px)}
+  .dfan-fan.list .dfan-item{opacity:0 !important; pointer-events:none; transition-delay:0s !important}
+  .dfan-sheet .ds-head{display:flex; align-items:center; gap:8px; padding:12px 14px 10px;
+    border-bottom:1px solid var(--n2); flex:0 0 auto}
+  .ds-head b{font-size:13px; line-height:18px; font-weight:600; color:var(--n8)}
+  .ds-head .ds-n{color:var(--n5); font-size:11.5px; font-variant-numeric:tabular-nums}
+  .ds-back{margin-left:auto; height:26px; padding:0 10px; border:1px solid var(--n3); border-radius:6px;
+    background:#FFF; color:var(--n6); font:inherit; font-size:11.5px; cursor:pointer;
+    display:inline-flex; align-items:center; transition:border-color .15s, color .15s}
+  .ds-back:hover{border-color:var(--n4); color:var(--n8)}
+  .ds-list{overflow:auto; padding:6px; flex:1 1 auto; min-height:0}
+  .ds-row{display:flex; align-items:center; gap:10px; padding:7px 8px; border-radius:8px;
+    text-decoration:none; transition:background .14s}
+  .ds-row:hover{background:var(--n1)}
+  .ds-row.cur{background:var(--b1)}
+  .ds-v{flex:0 0 auto; min-width:30px; height:18px; padding:0 5px; border-radius:4px;
+    display:inline-flex; align-items:center; justify-content:center; background:var(--n2);
+    color:var(--n7); font-size:10.5px; font-weight:600; font-variant-numeric:tabular-nums}
+  .ds-row.cur .ds-v{background:var(--b6); color:#FFF}
+  .ds-t{flex:1 1 auto; min-width:0; color:var(--n8); font-size:12.5px; line-height:18px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .ds-m{flex:0 0 auto; color:var(--n5); font-size:11px; font-variant-numeric:tabular-nums}
+  @media (prefers-reduced-motion: reduce){
+    .dfan-folder,.dfan-item,.dfan-veil,.dfan-in{transition-duration:.01ms !important}
+  }
+
+  /* ---------- 01 主稿：一张卡 + 右侧说明 ---------- */
+  .lead{display:grid; grid-template-columns:340px 1fr; gap:26px; align-items:start}
+  .lead-side{padding-top:20px}
+  .lead-side h3{margin:0 0 8px; font-size:14px; line-height:22px; font-weight:600; color:var(--n8)}
+  .lead-side p{margin:0; color:var(--n6); font-size:12.5px; line-height:21px}
+  .lead-side .tags{display:flex; flex-wrap:wrap; gap:6px; margin-top:12px}
+  .lead-side .tags span{padding:2px 8px; border-radius:5px; background:var(--n2);
+    color:var(--n6); font-size:11px; line-height:17px}
+  .lead-side .lpath{margin-top:14px; padding:8px 10px; border-radius:6px; background:var(--n1);
+    color:var(--n6); font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:11px; line-height:17px; word-break:break-all}
+  @media (max-width:860px){
+    .lead{grid-template-columns:1fr; gap:14px}
+    .lead-side{padding-top:0}
+  }
+  @media (max-width:640px){
+    .d-grid{grid-template-columns:1fr}
+  }
+</style>
+</head><body>
+
+<header class="topbar">
+  <div class="wrap">
+    <div class="crumb"><span>工业 AI 平台</span><i>/</i><span>文件不迷路</span><i>/</i><span>智能数据预测</span></div>
+    <!-- 项目名：按实际项目替换「智能数据预测」，同步改 <title> 与面包屑末项 -->
+    <h1>文件不迷路<span class="proj">（智能数据预测）</span><span class="vchip">层叠 2</span></h1>
+    <p class="sub">2026-11-16 — 2026-11-20　·　12 个产出文件（2.27 MB）　·　37 份迭代快照（34.6 MB）　·　另 8 项输入与参考<br>文件卡片统一为「层叠 2」：最新版是唯一实体卡，点开旧版沿弧线扇形展开</p>
+
+    <div class="quick">
+      <a class="qbtn primary" href="./智能数据预测设计稿-20261117-v1.html" target="_blank">
+        <svg viewBox="0 0 14 14" fill="none"><path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        打开主设计稿
+      </a>
+      <a class="qbtn" href="./智能数据预测-核对数据与字段抽屉-不可选列样式-3方案-20261120.html" target="_blank">
+        <svg viewBox="0 0 14 14" fill="none"><rect x="2" y="2.5" width="10" height="9" rx="1.6" stroke="currentColor" stroke-width="1.3"></rect><path d="M2 5.6h10M5.6 5.6v5.9" stroke="currentColor" stroke-width="1.3"></path></svg>
+        核对数据抽屉（最新）
+      </a>
+    </div>
+  </div>
+</header>
+
+<nav class="rail" aria-label="页面锚点">
+  <a href="#s1"><span class="rn">01</span><span class="rt">设计主稿</span></a>
+  <a href="#s2"><span class="rn">02</span><span class="rt">模块方案优化</span></a>
+  <a href="#s3"><span class="rn">03</span><span class="rt">版本迭代轨迹</span></a>
+  <a href="#s4"><span class="rn">04</span><span class="rt">其他文件</span></a>
+</nav>
+
+<main class="wrap">
+
+  <!-- 01 设计主稿 -->
+  <section id="s1">
+    <div class="shead"><span class="no">01</span><h2>设计主稿</h2><span class="count">1 个文件</span></div>
+    <p class="sdesc">整份需求只维护这一个 HTML，所有迭代都落在它身上。单文件自包含，双击 file:// 即可渲染。</p>
+
+    <div class="lead">
+      <div class="d-grid" id="gMain" style="grid-template-columns:1fr"></div>
+      <div class="lead-side">
+        <h3>这一个文件里有什么</h3>
+        <p>BOE 侧边导航（8 个一级 / 6 个二级）、数据列表页（筛选组件 + 组件库原生分页）、
+           对话页（60px 状态顶栏、执行记录默认收起、方案 A 冷启动、步骤条）、条件确认卡（方案 C 分组重排）、
+           数据核对抽屉、上传数据文件弹窗、结果页三页签、数据源抽屉。</p>
+        <div class="tags"><span>主交付</span><span>单文件自包含</span><span>状态在 localStorage</span><span>1093 KB</span></div>
+        <div class="lpath">智能数据预测/智能数据预测设计稿-20261117-v1.html</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 02 部件优化方案（模块 = 层叠 2 卡片，点开扇形展开历史版本） -->
+  <section id="s2">
+    <div class="shead"><span class="no">02</span><h2>模块方案优化</h2><span class="count">6 个模块 · 9 份方案</span></div>
+    <p class="sdesc">按部件模块分组。<strong>主图</strong>打开当前版本，<strong>卡片任意其它位置</strong>展开历史版本——旧版沿弧线向上扇形铺开、其余压暗；悬停任一张可删除，删除后 7 天内可撤回。</p>
+
+    <div class="d-grid" id="gMods"></div>
+  </section>
+
+  <!-- 03 版本轨迹（默认收起） -->
+  <section id="s3" class="collapsible">
+    <div class="shead" role="button" tabindex="0" aria-expanded="false" aria-controls="s3-body">
+      <span class="no">03</span><h2>版本迭代轨迹</h2><span class="count">37 份快照</span>
+      <span class="chev"><svg viewBox="0 0 14 14" fill="none" width="13" height="13"><path d="M3.5 5.5L7 9l3.5-3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    </div>
+    <p class="sdesc">每轮改动前自动存一份「改动前」快照，都能独立打开对照。按天归档，点标签直接开快照。默认收起，点标题展开。</p>
+    <div class="sec-body" id="s3-body">
+      <div class="sec-inner">
+
+    <div class="daygroup">
+      <div class="dg-left"><b>11-17</b><span>5 份 · 起稿</span></div>
+      <div class="dg-body">
+        <p><b>打底阶段</b>：修白屏 → 换组件库侧边导航 → 表格五项细节与分页固定右下 → 对话模块换样例样式 → 输入框精确对齐。定下「静态首屏必须写进 HTML」的强制约定。</p>
+        <div class="snaps">
+          <a href="./迭代快照/智能数据预测设计稿-20261117-v1-静态首屏修复前.html" target="_blank">静态首屏修复前<em>792 KB</em></a>
+          <a href="./迭代快照/智能数据预测设计稿-20261117-v1-新版侧边导航替换前.html" target="_blank">侧边导航替换前<em>850 KB</em></a>
+          <a href="./迭代快照/智能数据预测设计稿-20261117-v1-表格分页细节调整前.html" target="_blank">表格分页调整前<em>990 KB</em></a>
+          <a href="./迭代快照/智能数据预测设计稿-20261117-v1-对话模块样式替换前.html" target="_blank">对话模块替换前<em>993 KB</em></a>
+          <a href="./迭代快照/智能数据预测设计稿-20261117-v1-输入框样式优化前.html" target="_blank">输入框优化前<em>1001 KB</em></a>
+        </div>
+      </div>
+    </div>
+
+    <div class="daygroup">
+      <div class="dg-left"><b>11-18</b><span>21 份 · 功能成型</span></div>
+      <div class="dg-body">
+        <p><b>功能成型</b>：顶栏收到 60px、分页换组件库原生、冷启动按方案 A 落地；下午补上传链路（上传组件 → 读取优化 → 文件行图标）、组织需求弹窗、内容底框、返回图标、筛选按钮；傍晚收尾条件卡三点 / 四点与文案。</p>
+        <div class="snaps">
+          <a href="./迭代快照/智能数据预测设计稿-20261117-v1-顶栏60px前.html" target="_blank">顶栏 60px 前<em>1004 KB</em></a>
+          <a href="./迭代快照/智能数据预测设计稿-20261117-v1-分页组件替换前.html" target="_blank">分页组件替换前<em>1021 KB</em></a>
+          <a href="./迭代快照/智能数据预测设计稿-20261117-v1-冷启动方案A前.html" target="_blank">冷启动方案 A 前<em>1016 KB</em></a>
+          <a href="./迭代快照/智能数据预测设计稿-20261117-v1-思考过程前.html" target="_blank">思考过程前<em>1023 KB</em></a>
+          <a href="./迭代快照/智能数据预测设计稿-20261117-v1-核对抽屉前.html" target="_blank">核对抽屉前<em>1030 KB</em></a>
+          <a href="./迭代快照/智能数据预测设计稿-20261117-v1-结果抽屉前.html" target="_blank">结果抽屉前<em>1041 KB</em></a>
+          <a href="./迭代快照/智能数据预测设计稿-20261117-v1-流转过程后.html" target="_blank">流转过程后<em>1041 KB</em></a>
+          <a href="./迭代快照/智能数据预测设计稿-20261117-v1-顶栏标题前.html" target="_blank">顶栏标题前<em>1045 KB</em></a>
+          <a href="./迭代快照/智能数据预测设计稿-20261117-v1-内容底框前.html" target="_blank">内容底框前<em>1047 KB</em></a>
+          <a href="./迭代快照/智能数据预测设计稿-20261117-v1-返回图标前.html" target="_blank">返回图标前<em>1047 KB</em></a>
+          <a href="./迭代快照/智能数据预测设计稿-20261117-v1-组织需求弹窗前.html" target="_blank">组织需求弹窗前<em>1047 KB</em></a>
+          <a href="./迭代快照/智能数据预测设计稿-20261117-v1-上传组件前.html" target="_blank">上传组件前<em>1047 KB</em></a>
+          <a href="./迭代快照/智能数据预测设计稿-20261117-v1-上传读取优化前-20261118-1607.html" target="_blank">上传读取优化前<em>1049 KB</em></a>
+          <a href="./迭代快照/智能数据预测设计稿-20261117-v1-筛选按钮前-20261118-1802.html" target="_blank">筛选按钮前<em>1049 KB</em></a>
+          <a href="./迭代快照/智能数据预测设计稿-20261117-v1-箭头贴右前-20261118-1813.html" target="_blank">箭头贴右前<em>1050 KB</em></a>
+          <a href="./迭代快照/智能数据预测设计稿-20261117-v1-确认卡三点前-20261118-1823.html" target="_blank">确认卡三点前<em>1050 KB</em></a>
+          <a href="./迭代快照/智能数据预测设计稿-20261117-v1-i图标前-20261118-1827.html" target="_blank">i 图标前<em>1050 KB</em></a>
+          <a href="./迭代快照/智能数据预测设计稿-20261117-v1-删下一步文案前-20261118-1829.html" target="_blank">删下一步文案前<em>1050 KB</em></a>
+          <a href="./迭代快照/智能数据预测设计稿-20261117-v1-确认卡四点前-20261118-1839.html" target="_blank">确认卡四点前<em>1050 KB</em></a>
+          <a href="./迭代快照/智能数据预测-本对话产出索引-20261118-简化前.html" target="_blank">索引简化前<em>30.1 KB</em></a>
+          <a href="./迭代快照/智能数据预测-本对话产出索引-20261118-补齐1120前.html" target="_blank">索引补齐前<em>28.8 KB</em></a>
+        </div>
+      </div>
+    </div>
+
+    <div class="daygroup">
+      <div class="dg-left"><b>11-19</b><span>7 份 · 抽屉与弹窗</span></div>
+      <div class="dg-body">
+        <p><b>部件打磨</b>：拆分小助手 → 文件行改图标操作 → 下拉改 BOE 组件 → 分页器改内容区定位 → 步骤卡改原地吸附。当天另产出确认卡、上传弹窗、结果抽屉、核对抽屉四份方案稿，见 02 区。</p>
+        <div class="snaps">
+          <a href="./备份-拆分小助手前-20261119-1725/智能数据预测设计稿-20261117-v1.html" target="_blank">拆分小助手前<em>1087 KB</em></a>
+          <a href="./备份-文件行改图标操作-20261119-1740/智能数据预测设计稿-20261117-v1.html" target="_blank">文件行改图标<em>1093 KB</em></a>
+          <a href="./备份-下拉改BOE组件前-20261119-1748/智能数据预测设计稿-20261117-v1.html" target="_blank">下拉改 BOE 前<em>1092 KB</em></a>
+          <a href="./备份-分页器改内容区定位-20261119-1812/智能数据预测设计稿-20261117-v1.html" target="_blank">分页器定位前<em>1096 KB</em></a>
+          <a href="./备份-步骤卡改原地吸附-20261119-1915/智能数据预测设计稿-20261117-v1.html" target="_blank">步骤卡吸附前<em>1097 KB</em></a>
+          <a href="./迭代快照/删上传文案前-20261119-1426.html" target="_blank">删上传文案前<em>1076 KB</em></a>
+          <a href="./迭代快照/输入框附件卡改造前-20261119-1430.html" target="_blank">附件卡改造前<em>1076 KB</em></a>
+        </div>
+      </div>
+    </div>
+
+    <div class="daygroup">
+      <div class="dg-left"><b>11-20</b><span>4 份 · 今日</span></div>
+      <div class="dg-body">
+        <p><b>核对数据抽屉定型</b>：条件确认卡落方案 C、上传按钮接通文件弹窗、删「填写小助手」提示条；特征选择从 hover 改为鼠标框选，「选特征 / 定目标」改两个独立 button、去掉二选一切换样式，删步骤条「共 3 步 · 当前第 1 步」。抽屉补齐数据集划分与验证、分页、目标列下拉、chip 移除，并重排信息层级；傍晚起改对话页顶栏按状态分流、结果卡四版方案、结果抽屉四版补功能，改动直接落在主稿与方案稿，仅关键节点存快照。</p>
+        <div class="snaps">
+          <a class="now" href="./智能数据预测设计稿-20261117-v1.html" target="_blank">主稿（当前）<em>1135 KB</em></a>
+          <a href="./迭代快照/智能数据预测设计稿-20261117-v1-上传默认不选前-20261120.html" target="_blank">上传默认不选前<em>1093 KB</em></a>
+          <a href="./迭代快照/智能数据预测设计稿-20261117-v1-抽屉新版合并前-20261120.html" target="_blank">抽屉合并前<em>1093 KB</em></a>
+          <a href="./迭代快照/智能数据预测设计稿-20261117-v1-对话页快捷操作前-20261120.html" target="_blank">顶栏快捷操作前<em>1135 KB</em></a>
+          <a href="./迭代快照/智能数据预测-结果与建议抽屉-优化方案-20261119-补功能前-20261120.html" target="_blank">结果抽屉补功能前<em>45.8 KB</em></a>
+        </div>
+      </div>
+    </div>
+
+    <div class="note" style="margin-top:16px">
+      <svg viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="6" stroke="currentColor" stroke-width="1.3"></circle><path d="M7.5 6.6v3.6M7.5 4.8v.9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"></path></svg>
+      <span>快照都是「改动前」的完整页面，本身能独立打开，可作为回归对比基线；确认不再需要旧版后可整批清理，不影响主稿。</span>
+    </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 其他文件（测试数据 / 需求输入 / 参考与中间产物） -->
+  <section id="s4">
+    <div class="shead"><span class="no">04</span><h2>其他文件</h2><span class="count">10 个文件 · 3 类</span></div>
+    <p class="sdesc">不并入主稿、也不属于模块方案的其余产出：跑通链路用的样例数据、对话开始时收到的原始材料、样式参照与构建脚本。卡片样式与 01 / 02 完全一致。</p>
+
+    <div class="subgroup">
+      <div class="subhead"><h3>测试数据</h3><span class="scount">2 个文件</span></div>
+      <p class="subdesc">跑通「上传文件 → 核对数据」链路用的样例，133 天连续日度良率，与主稿里的 119 条匹配记录同源口径。</p>
+      <div class="d-grid" id="d-g4a"></div>
+    </div>
+
+    <div class="subgroup">
+      <div class="subhead"><h3>需求输入</h3><span class="scount">2 个文件</span></div>
+      <p class="subdesc">对话开始时收到的原始材料。原件在桌面原目录只读、未做修改，此处为归档副本，便于离线查阅。</p>
+      <div class="d-grid" id="d-g4b"></div>
+      <div style="margin-top:12px">
+        <div class="note blue">
+          <svg viewBox="0 0 15 15" fill="none"><path d="M7.5 1.8l5.2 2v4.3c0 3-2.1 5.4-5.2 6.4-3.1-1-5.2-3.4-5.2-6.4V3.8l5.2-2z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"></path></svg>
+          <span>对话内还产出过三张分析图（用户旅程图、功能信息架构图、任务流程图），是内联渲染的可视化，没有落成独立文件；需要的话可以补导出成 SVG / PNG。</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="subgroup">
+      <div class="subhead"><h3>参考与中间产物</h3><span class="scount">6 个文件</span></div>
+      <p class="subdesc">在线参考、样式参照物与构建脚本。不是交付物，但重做同类改动时会用到。</p>
+      <div class="d-grid" id="d-g4c"></div>
+    </div>
+  </section>
+
+</main>
+
+<!-- 层叠 2 的浮层：蒙层 / 卡片副本 / 扇形层 / 撤回条 / 删除确认 -->
+<div class="dfan" id="dfan" aria-hidden="true">
+  <div class="dfan-veil"></div>
+  <div class="dfan-folder"></div>
+  <div class="dfan-fan"></div>
+  <div class="dfan-undo" role="status" aria-live="polite"></div>
+  <div class="dfan-dlg" id="dfanDlg" aria-hidden="true">
+    <div class="dfan-dlg-mask"></div>
+    <div class="dfan-dlg-card" role="dialog" aria-modal="true" tabindex="-1" aria-labelledby="dfanDlgT" aria-describedby="dfanDlgP">
+      <h4 id="dfanDlgT">删除版本？</h4>
+      <p id="dfanDlgP">文件将保留 7 天，期间可撤回，7 天后自动清除。</p>
+      <div class="dfan-dlg-a">
+        <button class="dlg-no" type="button">取消</button>
+        <button class="dlg-ok" type="button">删除</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* 缩略图：与旧版索引页同一套 thumbs/，没有缩略图的文件用扩展名占位 */
+  var T = function(f){ return './thumbs/' + encodeURIComponent(f) + '.jpg'; };
+  var CHEV = '<svg viewBox="0 0 14 14" fill="none" width="11" height="11"><path d="M3.5 5.5L7 9l3.5-3.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var ARROW = '<svg viewBox="0 0 12 12" fill="none" width="11" height="11"><path d="M3.5 8.5L8.5 3.5M8.5 3.5H4.6M8.5 3.5v3.9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  function esc(s){
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c];
+    });
+  }
+
+  /* ---------------- 数据：与 20261118 版索引页一致，versions 按「新 → 旧」 ---------------- */
+  var MAIN = {
+    id:'main', name:'智能数据预测设计稿', status:'主交付', tone:'blue', note:'整份需求唯一交付稿，所有迭代都合并落在这一个文件上。',
+    versions:[
+      { v:'v1', title:'设计稿-20261117-v1', href:'./智能数据预测设计稿-20261117-v1.html',
+        date:'11-20', size:'1093 KB', thumb:'智能数据预测设计稿-20261117-v1', ext:'HTML',
+        note:'含 BOE 侧边导航、数据列表、对话页、条件确认卡、核对抽屉、上传弹窗、结果页三页签。' }
+    ]
+  };
+
+  var MODS = [
+    { id:'confirm', name:'确认预测条件卡片', status:'方案 C 已落地', tone:'green', unit:'份方案',
+      note:'同一张卡片的信息精简四版，C 分组重排已落地。',
+      versions:[
+        { v:'v1', title:'优化方案-20261119', href:'./智能数据预测-确认预测条件卡片-优化方案-20261119.html',
+          date:'11-19', size:'68.4 KB', thumb:'智能数据预测-确认预测条件卡片-优化方案-20261119', ext:'HTML',
+          note:'A 精简去重、B 摘要优先、C 分组重排（已落地）、D 推荐 / 自定义。' }
+      ] },
+
+    { id:'check', name:'核对数据抽屉', status:'最新版待合并', tone:'green', unit:'份方案',
+      note:'四版迭代到现在的滑选分界线形态，待合并回主稿。',
+      versions:[
+        { v:'v4', title:'不可选列样式-20261120', href:'./智能数据预测-核对数据与字段抽屉-不可选列样式-3方案-20261120.html',
+          date:'11-20', size:'45.6 KB', thumb:'智能数据预测-核对数据与字段抽屉-不可选列样式-3方案-20261120', ext:'HTML',
+          note:'索引区固定，特征区与目标区共用一条可滑动分界线；特征是框选、目标单选。' },
+        { v:'v3', title:'优化方案 v3-20261119', href:'./智能数据预测-核对数据与字段抽屉-优化方案-v3-20261119.html',
+          date:'11-20', size:'58.1 KB', thumb:'智能数据预测-核对数据与字段抽屉-优化方案-v3-20261119', ext:'HTML',
+          note:'按原型业务重做：步骤 1 核对数据（表头滑选特征、设为目标），步骤 2 数据划分与验证。' },
+        { v:'v2', title:'优化方案 v2-20261119', href:'./智能数据预测-核对数据抽屉-优化方案-v2-20261119.html',
+          date:'11-19', size:'32.7 KB', thumb:'智能数据预测-核对数据抽屉-优化方案-v2-20261119', ext:'HTML',
+          note:'四版收窄：A 单页工作台、B 左侧字段 · 右侧数据、C 一屏确认、D 三步向导。' },
+        { v:'v1', title:'优化方案 v1-20261119', href:'./智能数据预测-核对数据抽屉-优化方案-20261119.html',
+          date:'11-19', size:'44.4 KB', thumb:'智能数据预测-核对数据抽屉-优化方案-20261119', ext:'HTML',
+          note:'第一版：同一份数据（11 列 / 119 条）在四种布局下的样子，四版共用一套勾选状态。' }
+      ] },
+
+    { id:'result-card', name:'预测结果卡片', status:'四版未定稿', tone:'gray', unit:'份方案',
+      note:'对话流里「AR 良品产出量 · 预测结果」卡片的四种做法。',
+      versions:[
+        { v:'v1', title:'优化方案-20261120', href:'./智能数据预测-预测结果卡片-优化方案-20261120.html',
+          date:'11-20', size:'755.1 KB', thumb:'智能数据预测-预测结果卡片-优化方案-20261120', ext:'HTML',
+          note:'A 结论前置、B 图 + 逐日表、C 极简摘要、D 历史衔接，卡宽统一 772。' }
+      ] },
+
+    { id:'result-drawer', name:'结果与建议抽屉', status:'四版未定稿', tone:'gray', unit:'份方案',
+      note:'结果抽屉的信息分层四版，功能已按主稿补齐。',
+      versions:[
+        { v:'v1', title:'优化方案-20261119', href:'./智能数据预测-结果与建议抽屉-优化方案-20261119.html',
+          date:'11-20', size:'66.4 KB', thumb:'智能数据预测-结果与建议抽屉-优化方案-20261119', ext:'HTML',
+          note:'A 结论前置、B 摘要卡 + 分段折叠、C 左栏导航、D 问答式；含版本切换与导出。' }
+      ] },
+
+    { id:'upload', name:'上传数据文件弹窗', status:'四版未定稿', tone:'gray', unit:'份方案',
+      note:'上传弹窗的四种信息重排，A 单列收敛改动最小。',
+      versions:[
+        { v:'v1', title:'优化方案-20261119', href:'./智能数据预测-上传数据文件弹窗-优化方案-20261119.html',
+          date:'11-19', size:'48.5 KB', thumb:'智能数据预测-上传数据文件弹窗-优化方案-20261119', ext:'HTML',
+          note:'A 单列收敛、B 双区分层、C 极简 + 二级、D 表格化。' }
+      ] },
+
+    { id:'coldstart', name:'对话页冷启动', status:'方案 A 已落地', tone:'green', unit:'份方案',
+      note:'空对话页的引导四版，A 居中式引导已落地。',
+      versions:[
+        { v:'v1', title:'冷启动方案-20261118', href:'./智能数据预测-对话页冷启动方案-20261118.html',
+          date:'11-18', size:'53.7 KB', thumb:'智能数据预测-对话页冷启动方案-20261118', ext:'HTML',
+          note:'A 居中式引导（已落地）、B 三段式填空、C 工作台式、D 示例预演。' }
+      ] }
+  ];
+
+  var GROUPS = [
+    { id:'g4a', title:'测试数据', count:'2 个文件',
+      desc:'跑通「上传文件 → 核对数据」链路用的样例，133 天连续日度良率，与主稿里的 119 条匹配记录同源口径。',
+      items:[
+        { id:'d-csv', name:'日度良率样例', status:'可直接上传', tone:'blue',
+          note:'133 行日度良率，四列：DATE、PRODUCT_ID、YIELD_RATE、OUTPUT_QTY。',
+          versions:[{ v:'csv', title:'日度良率-20260701-20261110', href:'./智能数据预测-上传测试数据-日度良率-20260701-20261110.csv',
+            date:'11-18', size:'4.8 KB', ext:'CSV', note:'可直接上传的样例数据。' }] },
+        { id:'d-txt', name:'字段口径说明', status:'口径说明', tone:'gray',
+          note:'各列含义与单位、同日仅一条记录；历史区间 2026-07-01 ~ 2026-11-10。',
+          versions:[{ v:'txt', title:'字段口径说明', href:'./智能数据预测-上传测试数据-字段口径说明.txt',
+            date:'11-18', size:'0.7 KB', ext:'TXT', note:'配合 CSV 使用，不可训练。' }] }
+      ] },
+
+    { id:'g4b', title:'需求输入', count:'2 个文件',
+      desc:'对话开始时收到的原始材料。原件在桌面原目录只读、未做修改，此处为归档副本，便于离线查阅。',
+      items:[
+        { id:'d-req', name:'需求原型 V1', status:'外部输入', tone:'gray',
+          note:'需求方给的原型，本次改造的源头；导航结构、业务流程、任务数据模型均以它为准。',
+          versions:[{ v:'v12', title:'智能数据预测-20261112-v12', href:'./需求输入/%E6%99%BA%E8%83%BD%E6%95%B0%E6%8D%AE%E9%A2%84%E6%B5%8B-20261112-v12(1).html',
+            date:'11-16', size:'771 KB', ext:'HTML', note:'归档副本。' }] },
+        { id:'d-spec', name:'交互说明', status:'外部输入', tone:'gray',
+          note:'字段口径、状态流转、各步骤的交互约定，需求讲解与验收的依据。',
+          versions:[{ v:'v12', title:'智能数据预测-交互说明-20261112-v12', href:'./需求输入/%E6%99%BA%E8%83%BD%E6%95%B0%E6%8D%AE%E9%A2%84%E6%B5%8B-%E4%BA%A4%E4%BA%92%E8%AF%B4%E6%98%8E-20261112-v12(1).html',
+            date:'11-16', size:'30.2 KB', ext:'HTML', note:'归档副本。' }] }
+      ] },
+
+    { id:'g4c', title:'参考与中间产物', count:'6 个文件',
+      desc:'在线参考、样式参照物与构建脚本。不是交付物，但重做同类改动时会用到。',
+      items:[
+        { id:'d-sample', name:'对话模块样例', status:'一手来源', tone:'blue',
+          note:'对话消息流与输入框的原始设计样例，气泡、列宽、输入框尺寸与配色以此为准。',
+          versions:[{ v:'在线', title:'workbuddy.cn 资料库', href:'https://www.workbuddy.cn/space/d/qx7YJedDmf8j93Ji4TXE0I',
+            date:'11-17', size:'资料库网页', ext:'在线', note:'在线一手来源。' }] },
+        { id:'d-panelspec', name:'chat-panel-spec.html', status:'本地副本', tone:'gray',
+          note:'在线样例的本地 Pixso 导出稿，离线时量取尺寸、圆角、阴影与配色。',
+          versions:[{ v:'html', title:'chat-panel-spec', href:'./参考/chat-panel-spec.html',
+            date:'11-17', size:'3.92 MB', ext:'HTML', note:'本地副本。' }] },
+        { id:'d-split', name:'build-split.py', status:'已停用', tone:'gray',
+          note:'拆分构建脚本：以主稿为源注入 PAGE_MODE，拆分已废弃，脚本留作参考。',
+          versions:[{ v:'py', title:'build-split', href:'./参考/build-split.py',
+            date:'11-18', size:'6.5 KB', ext:'PY', note:'已停用。' }] },
+        { id:'d-pg', name:'patch-pagination.py', status:'可复用', tone:'gray',
+          note:'分页替换脚本：抽组件库 4-6-pagination 样式块、改作用域、替换旧手写分页。',
+          versions:[{ v:'py', title:'patch-pagination', href:'./参考/patch-pagination.py',
+            date:'11-18', size:'5.1 KB', ext:'PY', note:'可复用。' }] },
+        { id:'d-static', name:'task-static.html', status:'中间产物', tone:'gray',
+          note:'任务页静态首屏快照：删掉全部脚本后页面长什么样，用于兜底防白屏。',
+          versions:[{ v:'html', title:'task-static', href:'./参考/task-static.html',
+            date:'11-18', size:'11 KB', ext:'HTML', note:'中间产物。' }] },
+        { id:'d-patch', name:'patch_*.py 替换脚本', status:'一次性', tone:'gray', unit:'个文件', cap:'', moreWord:'更多脚本',
+          note:'11-18 把条件卡与下拉换 BOE 组件时用的逐段替换脚本，一次性，留作改法参考。',
+          versions:[
+            { v:'01', title:'patch_confirm_boe', href:'./参考/patch_confirm_boe.py', date:'11-18', size:'PY', ext:'PY', note:'条件卡换 BOE 组件。' },
+            { v:'02', title:'patch_confirm_runtime', href:'./参考/patch_confirm_runtime.py', date:'11-18', size:'PY', ext:'PY', note:'条件卡运行时补丁。' },
+            { v:'03', title:'patch_chat_tokens', href:'./参考/patch_chat_tokens.py', date:'11-18', size:'PY', ext:'PY', note:'对话页 token 替换。' },
+            { v:'04', title:'patch_boeselect_args', href:'./参考/patch_boeselect_args.py', date:'11-18', size:'PY', ext:'PY', note:'BOE 下拉参数修正。' },
+            { v:'05', title:'patch_trim_inline_css', href:'./参考/patch_trim_inline_css.py', date:'11-18', size:'PY', ext:'PY', note:'清理内联 CSS。' }
+          ] }
+      ] }
+  ];
+
+  /* ---------------- 卡片渲染 ---------------- */
+  function allG(){
+    var out = [MAIN];
+    MODS.forEach(function(g){ out.push(g); });
+    GROUPS.forEach(function(gr){ gr.items.forEach(function(g){ out.push(g); }); });
+    return out;
+  }
+  var BY = {};
+  allG().forEach(function(g){ BY[g.id] = g; });
+
+  function isGone(g, v){ return (g.removed || []).indexOf(v) >= 0; }
+  function live(g){ return g.versions.filter(function(v){ return !isGone(g, v.v); }); }
+
+  var DOCI = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">'
+    + '<path d="M6.5 3.5h7.2l4.3 4.3v12.2a.5.5 0 0 1-.5.5H6.5a.5.5 0 0 1-.5-.5V4a.5.5 0 0 1 .5-.5z"'
+    + ' stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>'
+    + '<path d="M13.5 3.6v4.2h4.2" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>'
+    + '</svg>';
+
+  function heroHTML(v, cap){
+    var inner = v.thumb
+      ? '<img src="' + T(v.thumb) + '" alt="' + esc(v.title) + ' 预览" loading="lazy"'
+        + ' onerror="this.style.display=\'none\'">'
+      : '<span class="dico">' + DOCI + '</span><span class="dext">' + esc(v.ext || 'FILE') + '</span>';
+    return '<a class="hero' + (v.thumb ? '' : ' plain') + '" href="' + v.href + '" target="_blank"'
+      + ' title="' + esc(v.title) + '">' + inner
+      + (cap ? '<span class="cap">' + esc(cap) + '</span>' : '') + '</a>';
+  }
+
+  function stackHTML(g){
+    var vs = live(g), cur = vs[0], multi = vs.length > 1;
+    var backs = '';
+    if (multi) backs = '<span class="d-back b2"></span><span class="d-back b1"></span>';
+    var cap = ('cap' in g) ? g.cap : (multi ? '当前 · ' + cur.v : '');
+    var bar;
+    if (multi){
+      bar = '<button class="d-bar" type="button" aria-expanded="false">'
+        + '<b>' + esc(g.name) + '</b>'
+        + '<span class="pill ' + (g.tone || 'gray') + '">' + esc(g.status) + '</span>'
+        + '<span class="dm">' + vs.length + ' ' + esc(g.unit || '个版本') + '</span>'
+        + '<span class="dchev">' + CHEV + '</span></button>';
+    } else {
+      bar = '<a class="d-bar" href="' + cur.href + '" target="_blank">'
+        + '<b>' + esc(g.name) + '</b>'
+        + '<span class="pill ' + (g.tone || 'gray') + '">' + esc(g.status) + '</span>'
+        + '<span class="dm">' + esc(cur.date) + ' · ' + esc(cur.size) + '</span>'
+        + '<span class="dopen">' + ARROW + '</span></a>';
+    }
+    var sub = g.note ? '<div class="d-sub" title="' + esc(g.note) + '">' + esc(g.note) + '</div>' : '';
+    return '<div class="d-stack' + (multi ? ' is-multi' : '') + '" data-id="' + g.id + '">'
+      + backs + '<article class="d-card">' + heroHTML(cur, cap) + sub + bar + '</article></div>';
+  }
+
+  function paint(host, list){
+    host.innerHTML = list.map(stackHTML).join('');
+  }
+
+  paint(document.getElementById('gMain'), [MAIN]);
+  paint(document.getElementById('gMods'), MODS);
+  GROUPS.forEach(function(gr){
+    var host = document.getElementById('d-' + gr.id);
+    if (host) paint(host, gr.items);
+  });
+
+  /* 主稿右侧说明 */
+  var leadNote = document.getElementById('leadNote');
+  if (leadNote) leadNote.textContent = MAIN.versions[0].note;
+
+  /* ---------------- 浮层与扇形 ---------------- */
+  var dfan = document.getElementById('dfan');
+  var dfanVeil = dfan.querySelector('.dfan-veil');
+  var dfanFolder = dfan.querySelector('.dfan-folder');
+  var dfanFan = dfan.querySelector('.dfan-fan');
+  var dfanUndo = dfan.querySelector('.dfan-undo');
+  var dfanDlg = document.getElementById('dfanDlg');
+  var dlgT = dfanDlg.querySelector('h4');
+  var dlgCard = dfanDlg.querySelector('.dfan-dlg-card');
+  var dlgOk = dfanDlg.querySelector('.dlg-ok');
+  var dlgNo = dfanDlg.querySelector('.dlg-no');
+  var dlgCtx = null, dlgTimer = 0;
+  var dOpen = null, dTimer = 0;
+  var FAN_MAX = 5;
+  var fanCtx = null;
+
+  function gOf(stack){ return BY[stack.getAttribute('data-id')]; }
+
+  function fanModel(g){
+    var c = fanCtx, itemW = c.itemW, itemH = c.itemH;
+    var availHalf = Math.min(c.cx - 12, c.vw - c.cx - 12);
+    var all = live(g).slice(1);
+    var n = all.length;
+    var capByWidth = Math.max(2, Math.floor((availHalf * 2) / (itemW + 34)) + 1);
+    var slots = Math.min(n, FAN_MAX, capByWidth);
+
+    var layoutFan = function(cnt, gp){
+      if (cnt < 2) return { xs:[0], half:0, R:760, ths:[0] };
+      var hh = (cnt - 1) * (itemW + 34) / 2;
+      var rad = Math.max(760, hh / Math.sin(26 * Math.PI / 180));
+      var pos = [], ths = [], ws = [];
+      for (var i = 0; i < cnt; i++) pos[i] = (i - (cnt - 1) / 2) * (itemW + 34);
+      for (var pass = 0; pass < 4; pass++){
+        ths = pos.map(function(q){ return Math.asin(Math.max(-1, Math.min(1, q / rad))); });
+        ws = ths.map(function(t){ return itemW * Math.cos(t) + itemH * Math.abs(Math.sin(t)); });
+        var acc = [0];
+        for (var k = 1; k < cnt; k++) acc[k] = acc[k - 1] + (ws[k - 1] + ws[k]) / 2 + gp;
+        var span = acc[cnt - 1];
+        pos = acc.map(function(q){ return q - span / 2; });
+        hh = span / 2;
+        rad = Math.max(760, hh / Math.sin(26 * Math.PI / 180));
+      }
+      ths = pos.map(function(q){ return Math.asin(Math.max(-1, Math.min(1, q / rad))); });
+      return { xs: pos, half: hh, R: rad, ths: ths };
+    };
+
+    var gap = 18, fan = layoutFan(slots, gap);
+    for (var guard = 0; guard < 8; guard++){
+      var eTh = Math.abs(fan.ths[0]);
+      var eBox = (itemW * Math.cos(eTh) + itemH * Math.sin(eTh)) / 2;
+      if (fan.half + eBox <= availHalf) break;
+      if (gap > 6) gap -= 4;
+      else if (slots > 2){ slots -= 1; gap = 18; }
+      else break;
+      fan = layoutFan(slots, gap);
+    }
+
+    var pack = n > slots;
+    var shown = pack ? all.slice(0, slots - 1) : all;
+    var lift = itemH / 2 + 50;
+    var D = fan.R - lift;
+    var thMax = Math.abs(fan.ths[0]);
+    var aabbH = itemH * Math.cos(thMax) + itemW * Math.sin(thMax);
+    return { all: all, n: n, slots: slots, pack: pack, shown: shown,
+             xs: fan.xs, ths: fan.ths, R: fan.R, half: fan.half,
+             D: D, lift: lift, need: lift + aabbH / 2 + 24 };
+  }
+
+  function fanHTML(g, model){
+    if (!model.n) return '<div class="dfan-empty">历史文件已全部删除</div>';
+    var itemW = fanCtx.itemW;
+    var mid = (model.slots - 1) / 2;
+    var seat = function(i){
+      var th = model.ths[i] || 0;
+      var y = model.D - model.R * Math.cos(th);
+      return ' style="--w:' + itemW + 'px;--x:' + Math.round(model.xs[i] || 0) + 'px;'
+        + '--y:' + Math.round(y) + 'px;--rot:' + (th * 180 / Math.PI).toFixed(1) + 'deg;'
+        + '--d:' + (170 + Math.round(Math.abs(i - mid) * 70)) + 'ms;'
+        + 'z-index:' + (46 - Math.round(Math.abs(i - mid) * 4)) + '"';
+    };
+
+    var cells = model.shown.map(function(v, i){
+      var shot = v.thumb
+        ? '<span class="dfan-shot"><img src="' + T(v.thumb) + '" alt="' + esc(v.title) + ' 预览" loading="lazy">'
+          + '<span class="dfan-v">' + esc(v.v) + '</span></span>'
+        : '<span class="dfan-shot noimg"><span class="dext">' + esc(v.ext || 'FILE') + '</span>'
+          + '<span class="dfan-v">' + esc(v.v) + '</span></span>';
+      return '<a class="dfan-item" data-v="' + esc(v.v) + '" href="' + v.href + '" target="_blank"'
+        + ' title="' + esc(v.title) + '"' + seat(i) + '>'
+        + '<span class="dfan-in">' + shot
+        +   '<span class="dfan-meta"><span class="dfan-t">' + esc(v.title) + '</span>'
+        +     '<span class="dfan-d">' + esc(v.date) + '</span></span>'
+        +   '<span class="dfan-x" role="button" tabindex="-1" aria-label="删除 ' + esc(v.v) + '" title="删除">'
+        +     '<svg viewBox="0 0 12 12" fill="none"><path d="M3.7 3.7l4.6 4.6M8.3 3.7l-4.6 4.6"'
+        +       ' stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>'
+        +   '</span>'
+        + '</span></a>';
+    });
+
+    if (model.pack){
+      cells.push('<button class="dfan-item more" type="button" aria-label="查看全部 ' + model.n + ' 个' + (g.unit || '版本') + '"'
+        + seat(model.slots - 1) + '>'
+        + '<span class="dfan-in"><span class="dfan-morebox"><b>+' + (model.n - model.shown.length) + '</b>'
+        +   '<i>' + (g.moreWord || '更早版本') + '</i></span></span></button>');
+    }
+    return cells.join('');
+  }
+
+  function bindFan(g, stack){
+    var mb = dfanFan.querySelector('.dfan-item.more');
+    if (mb) mb.addEventListener('click', function(e){
+      e.stopPropagation();
+      dfanShowAll(g, stack);
+    });
+    [].forEach.call(dfanFan.querySelectorAll('.dfan-x'), function(x){
+      x.addEventListener('click', function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        dfanAsk(g, x.closest('.dfan-item'));
+      });
+    });
+  }
+
+  function syncBar(g){
+    var dm = dfanFolder.querySelector('.d-bar .dm');
+    if (dm) dm.textContent = live(g).length + ' ' + (g.unit || '个版本');
+  }
+
+  function dfanDelete(g, el){
+    if (!el || el.classList.contains('out')) return;
+    var v = el.getAttribute('data-v');
+    if (!v) return;
+    el.classList.add('out');
+    window.setTimeout(function(){
+      g.removed = g.removed || [];
+      g.removed.push(v);
+      repaintFan(g);
+      syncBar(g);
+      updateUndo(g);
+    }, 170);
+  }
+
+  function repaintFan(g){
+    var old = {};
+    [].forEach.call(dfanFan.querySelectorAll('.dfan-item'), function(el){
+      if (el.classList.contains('more')) return;
+      old[el.getAttribute('data-v')] = [
+        el.style.getPropertyValue('--x'),
+        el.style.getPropertyValue('--y'),
+        el.style.getPropertyValue('--rot')
+      ];
+    });
+
+    dfanFan.innerHTML = fanHTML(g, fanModel(g));
+
+    [].forEach.call(dfanFan.querySelectorAll('.dfan-item'), function(el){
+      var o = old[el.getAttribute('data-v')];
+      if (!o) return;
+      el.dataset.tx = el.style.getPropertyValue('--x');
+      el.dataset.ty = el.style.getPropertyValue('--y');
+      el.dataset.trot = el.style.getPropertyValue('--rot');
+      el.style.setProperty('--x', o[0]);
+      el.style.setProperty('--y', o[1]);
+      el.style.setProperty('--rot', o[2]);
+      el.classList.add('settled');
+    });
+    bindFan(g, fanCtx.stack);
+    void dfanFan.offsetWidth;
+
+    /* 先把幸存卡片放回旧位（settled 禁过渡），下一帧再写新位放它们滑过去。
+       后台标签页 rAF 会被暂停，所以补一个定时器兜底，避免布局卡在旧位。 */
+    var released = false;
+    var release = function(){
+      if (released) return;
+      released = true;
+      [].forEach.call(dfanFan.querySelectorAll('.dfan-item.settled'), function(el){
+        el.classList.remove('settled');
+        if (el.dataset.tx){
+          el.style.setProperty('--x', el.dataset.tx);
+          el.style.setProperty('--y', el.dataset.ty);
+          el.style.setProperty('--rot', el.dataset.trot);
+          delete el.dataset.tx; delete el.dataset.ty; delete el.dataset.trot;
+        }
+      });
+    };
+    window.requestAnimationFrame(function(){
+      window.requestAnimationFrame(release);
+    });
+    window.setTimeout(release, 160);
+  }
+
+  function updateUndo(g){
+    var list = g.removed || [];
+    if (!list.length){
+      dfanUndo.classList.remove('on');
+      dfanUndo.innerHTML = '';
+      return;
+    }
+    var last = list[list.length - 1];
+    var ver = g.versions.filter(function(x){ return x.v === last; })[0];
+    var lb = (ver && !/^v\d+$/i.test(last)) ? ver.title : last;
+    dfanUndo.innerHTML = '<span class="du-t">已删除 <b>' + esc(lb) + '</b> · 保留 7 天</span>'
+      + (list.length > 1 ? '<span class="du-n">还有 ' + (list.length - 1) + ' 个</span>' : '')
+      + '<button class="du-b" type="button">撤回</button>';
+    dfanUndo.classList.add('on');
+    dfanUndo.querySelector('.du-b').addEventListener('click', function(e){
+      e.stopPropagation();
+      dfanUndoLast(g);
+    });
+  }
+
+  function dfanUndoLast(g){
+    if (!g.removed || !g.removed.length) return;
+    g.removed.pop();
+    repaintFan(g);
+    syncBar(g);
+    updateUndo(g);
+  }
+
+  /* ---------- 删除二次确认 ---------- */
+  function dfanAsk(g, el){
+    var v = el && el.getAttribute('data-v');
+    if (!v) return;
+    dlgCtx = { g: g, el: el };
+    var ver = g.versions.filter(function(x){ return x.v === v; })[0];
+    dlgT.textContent = '删除 ' + ((ver && !/^v\d+$/i.test(v)) ? ver.title : v) + '？';
+    window.clearTimeout(dlgTimer);
+    dfanDlg.classList.add('in');
+    dfanDlg.removeAttribute('aria-hidden');
+    void dfanDlg.offsetWidth;
+    dfanDlg.classList.add('on');
+    dlgCard.focus({ preventScroll: true });
+  }
+
+  function dfanAskClose(){
+    if (!dfanDlg.classList.contains('on')) return;
+    dfanDlg.classList.remove('on');
+    dfanDlg.setAttribute('aria-hidden', 'true');
+    window.clearTimeout(dlgTimer);
+    dlgTimer = window.setTimeout(function(){
+      if (dfanDlg.classList.contains('on')) return;
+      dfanDlg.classList.remove('in');
+      dlgCtx = null;
+    }, 200);
+  }
+
+  dlgNo.addEventListener('click', function(e){
+    e.preventDefault(); e.stopPropagation();
+    dfanAskClose();
+  });
+  dfanDlg.querySelector('.dfan-dlg-mask').addEventListener('click', function(e){
+    e.preventDefault(); e.stopPropagation();
+    dfanAskClose();
+  });
+  dlgOk.addEventListener('click', function(e){
+    e.preventDefault(); e.stopPropagation();
+    var c = dlgCtx;
+    dfanAskClose();
+    if (c) dfanDelete(c.g, c.el);
+  });
+  dfanDlg.addEventListener('keydown', function(e){
+    if (e.key !== 'Tab' || !dfanDlg.classList.contains('on')) return;
+    e.preventDefault();
+    var order = [dlgNo, dlgOk];
+    var i = order.indexOf(document.activeElement);
+    if (e.shiftKey) i = i <= 0 ? order.length - 1 : i - 1;
+    else i = i >= order.length - 1 ? 0 : i + 1;
+    order[i].focus({ preventScroll: true });
+  });
+
+  /* ---------- 展开 / 收起 ---------- */
+  function dfanOpen(stack){
+    var g = gOf(stack);
+    if (!g || live(g).length < 2) return;
+    if (dOpen) dfanClose();
+
+    var card = stack.querySelector('.d-card');
+    var sbw = window.innerWidth - document.documentElement.clientWidth;
+    document.documentElement.style.setProperty('--dfan-sb', Math.max(0, sbw) + 'px');
+    document.documentElement.classList.add('dfan-lock');
+
+    var r = card.getBoundingClientRect();
+    var vw = window.innerWidth, vh = window.innerHeight;
+    var cx = r.left + r.width / 2;
+
+    var itemW = Math.round(Math.max(112, Math.min(r.width * 0.42, 148)));
+    fanCtx = { g: g, stack: stack, card: card, vw: vw, cx: cx,
+               itemW: itemW, itemH: itemW * 0.82, top: 0 };
+
+    var model = fanModel(g);
+    var dy = r.top < model.need ? Math.round(model.need - r.top) : 0;
+    var maxDy = vh - 24 - r.bottom;
+    if (dy > maxDy) dy = Math.max(0, maxDy);
+    var top = r.top + dy;
+
+    dfanFolder.innerHTML = '';
+    var clone = card.cloneNode(true);
+    clone.removeAttribute('id');
+    var cbar = clone.querySelector('.d-bar');
+    if (cbar && cbar.tagName === 'BUTTON'){
+      cbar.setAttribute('aria-label', '收起历史文件');
+      cbar.addEventListener('click', dfanClose);
+    }
+    dfanFolder.appendChild(clone);
+    dfanFolder.style.left = r.left + 'px';
+    dfanFolder.style.top = r.top + 'px';
+    dfanFolder.style.width = r.width + 'px';
+    dfanFolder.style.transform = 'translate(0px,0px)';
+
+    fanCtx.top = top;
+    dfanFan.style.left = cx + 'px';
+    dfanFan.style.top = top + 'px';
+    dfanFan.classList.remove('list', 'sd');
+    dfanFan.innerHTML = fanHTML(g, model);
+    bindFan(g, stack);
+    syncBar(g);
+    updateUndo(g);
+
+    stack.classList.add('is-open');
+    dfan.classList.add('in');
+    dfan.removeAttribute('aria-hidden');
+    void dfan.offsetWidth;
+    var kicked = false;
+    var kick = function(){
+      if (kicked) return;
+      kicked = true;
+      dfan.classList.add('on');
+      dfanFolder.style.transform = 'translate(0px,' + dy + 'px)';
+    };
+    window.requestAnimationFrame(kick);
+    window.setTimeout(kick, 120);
+
+    var bar = stack.querySelector('.d-bar');
+    if (bar && bar.tagName === 'BUTTON') bar.setAttribute('aria-expanded', 'true');
+    dOpen = stack;
+  }
+
+  function dfanClose(){
+    if (!dOpen) return;
+    var stack = dOpen; dOpen = null;
+    dfanAskClose();
+    var bar = stack.querySelector('.d-bar');
+    dfan.classList.remove('on');
+    dfanFolder.style.transform = 'translate(0px,0px)';
+    if (bar && bar.tagName === 'BUTTON') bar.setAttribute('aria-expanded', 'false');
+    document.documentElement.classList.remove('dfan-lock');
+    window.clearTimeout(dTimer);
+    dTimer = window.setTimeout(function(){
+      if (dOpen) return;
+      dfan.classList.remove('in');
+      dfan.setAttribute('aria-hidden', 'true');
+      dfanFolder.innerHTML = '';
+      dfanFan.innerHTML = '';
+      dfanFan.classList.remove('list', 'sd');
+      dfanUndo.classList.remove('on');
+      dfanUndo.innerHTML = '';
+      dfanDlg.classList.remove('on', 'in');
+      dfanDlg.setAttribute('aria-hidden', 'true');
+      dlgCtx = null;
+      stack.classList.remove('is-open');
+      /* 删除过的卡在收起时重绘：纸片层与计数跟着变 */
+      var g = gOf(stack), sid = stack.getAttribute('data-id');
+      if (g && g.removed && g.removed.length){
+        var box = document.createElement('div');
+        box.innerHTML = stackHTML(g);
+        var fresh = box.firstChild;
+        stack.parentNode.replaceChild(fresh, stack);
+      }
+      var back = document.querySelector('.d-stack[data-id="' + sid + '"] .d-bar');
+      if (back && document.body.contains(back)) back.focus({ preventScroll:true });
+    }, 480);
+  }
+
+  /* 全量清单：扇面装不下时，由「+N」入口卡展开 */
+  function dfanShowAll(g, stack){
+    if (!dOpen || dfanFan.classList.contains('list')) return;
+    var cr = stack.querySelector('.d-card').getBoundingClientRect();
+    var vw = window.innerWidth, vh = window.innerHeight;
+    var ccx = cr.left + cr.width / 2;
+    var w = Math.max(300, Math.min(520, vw - 32));
+    var up = cr.top - 40, down = vh - cr.top - 36;
+    var dir = up >= 240 ? 'up' : 'down';
+    var h = Math.max(200, Math.min(430, dir === 'up' ? up : down));
+    var sx = 0;
+    if (ccx - w / 2 < 16) sx = 16 - (ccx - w / 2);
+    else if (ccx + w / 2 > vw - 16) sx = vw - 16 - (ccx + w / 2);
+
+    var list = live(g);
+    var wrap = document.createElement('div');
+    wrap.className = 'dfan-sheet';
+    wrap.style.setProperty('--sw', Math.round(w) + 'px');
+    wrap.style.setProperty('--sh', Math.round(h) + 'px');
+    wrap.style.setProperty('--sx', Math.round(sx) + 'px');
+    wrap.innerHTML = '<div class="ds-head"><b>全部文件</b>'
+      + '<span class="ds-n">共 ' + list.length + ' 个</span>'
+      + '<button class="ds-back" type="button">返回扇形</button></div>'
+      + '<div class="ds-list">' + list.map(function(v, i){
+          return '<a class="ds-row' + (i === 0 ? ' cur' : '') + '" href="' + v.href + '" target="_blank"'
+            + ' title="' + esc(v.title) + '">'
+            + '<span class="ds-v">' + esc(v.v) + '</span>'
+            + '<span class="ds-t">' + esc(v.title) + '</span>'
+            + '<span class="ds-m">' + esc(v.date) + ' · ' + esc(v.size) + '</span></a>';
+        }).join('') + '</div>';
+
+    if (dir === 'down') dfanFan.classList.add('sd');
+    dfanFan.appendChild(wrap);
+    void wrap.offsetWidth;
+    dfanFan.classList.add('list');
+
+    wrap.querySelector('.ds-back').addEventListener('click', function(e){
+      e.stopPropagation();
+      dfanBackFromList();
+    });
+  }
+
+  function dfanBackFromList(){
+    var wrap = dfanFan.querySelector('.dfan-sheet');
+    if (!wrap) return false;
+    dfanFan.classList.remove('list');
+    window.setTimeout(function(){
+      if (wrap.parentNode) wrap.parentNode.removeChild(wrap);
+    }, 260);
+    window.setTimeout(function(){
+      if (!dfanFan.classList.contains('list')) dfanFan.classList.remove('sd');
+    }, 300);
+    return true;
+  }
+
+  /* 点击：多版本整卡负责展开；单文件整卡负责打开文件（与 v1 的整卡可点一致） */
+  document.addEventListener('click', function(e){
+    var stack = e.target.closest && e.target.closest('.d-stack');
+    if (!stack) return;
+    if (e.target.closest('.hero')) return;
+    if (!stack.classList.contains('is-multi')){
+      if (e.target.closest('a')) return;
+      var link = stack.querySelector('.d-bar[href]');
+      if (!link) return;
+      e.preventDefault();
+      window.open(link.getAttribute('href'), '_blank');
+      return;
+    }
+    if (stack.classList.contains('is-open')) dfanClose();
+    else dfanOpen(stack);
+  });
+
+  dfanVeil.addEventListener('click', dfanClose);
+  window.addEventListener('resize', function(){ if (dOpen) dfanClose(); });
+
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape' && dOpen){
+      if (dfanDlg.classList.contains('on')){ dfanAskClose(); return; }
+      if (dfanFan.classList.contains('list')){ dfanBackFromList(); return; }
+      dfanClose();
+    }
+  });
+})();
+
+</script>
+
+<script>
+(function(){
+  var KEY='idx-open-sections';
+  function readOpen(){ try{ return JSON.parse(localStorage.getItem(KEY)||'[]'); }catch(e){ return []; } }
+  function saveOpen(ids){ try{ localStorage.setItem(KEY, JSON.stringify(ids)); }catch(e){} }
+  var sections=[].slice.call(document.querySelectorAll('section.collapsible'));
+  function setOpen(sec, open, persist){
+    sec.classList.toggle('open', open);
+    var head=sec.querySelector('.shead');
+    if(head) head.setAttribute('aria-expanded', open?'true':'false');
+    if(persist!==false){
+      saveOpen(sections.filter(function(x){return x.classList.contains('open');})
+                       .map(function(x){return x.id;}));
+    }
+  }
+  sections.forEach(function(sec){
+    var head=sec.querySelector('.shead');
+    if(!head) return;
+    head.addEventListener('click', function(){ setOpen(sec, !sec.classList.contains('open')); });
+    head.addEventListener('keydown', function(e){
+      if(e.key==='Enter'||e.key===' '){ e.preventDefault(); setOpen(sec, !sec.classList.contains('open')); }
+    });
+  });
+  var opened=readOpen();
+  sections.forEach(function(sec){ setOpen(sec, opened.indexOf(sec.id)>=0, false); });
+  [].slice.call(document.querySelectorAll('.rail a[href^="#"]')).forEach(function(a){
+    a.addEventListener('click', function(){
+      var sec=document.getElementById(a.getAttribute('href').slice(1));
+      if(sec && sec.classList.contains('collapsible')) setOpen(sec, true);
+    });
+  });
+})();
+</script>
+
+<script>
+(function(){
+  var rail=document.querySelector('.rail'); if(!rail) return;
+  var links=[].slice.call(rail.querySelectorAll('a'));
+  var secs=links.map(function(a){ return document.getElementById(a.getAttribute('href').slice(1)); });
+  var cur=-1, raf=null;
+  function sync(){
+    var probe=window.scrollY+Math.min(200, window.innerHeight*0.28), idx=0;
+    for(var i=0;i<secs.length;i++){
+      if(!secs[i]) continue;
+      var top=secs[i].getBoundingClientRect().top+window.scrollY;
+      if(top<=probe) idx=i;
+    }
+    if(window.innerHeight+window.scrollY>=document.documentElement.scrollHeight-8) idx=secs.length-1;
+    if(idx===cur) return;
+    cur=idx;
+    links.forEach(function(a,i){ a.classList.toggle('on', i===idx); });
+  }
+  function onScroll(){ if(raf) return; raf=requestAnimationFrame(function(){ raf=null; sync(); }); }
+  window.addEventListener('scroll',onScroll,{passive:true});
+  window.addEventListener('resize',onScroll);
+  sync();
+})();
+</script>
+</body></html>

@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>智能数据预测 · 本对话产出索引</title>
+<style>
+  :root{
+    --b1:#EAF4FF; --b2:#D6EAFF; --b6:#0081FF; --b7:#0072E3;
+    --n1:#F7F9FC; --n2:#EFF2F6; --n3:#E3E8EF; --n4:#C9D2DD; --n5:#9AA6B4;
+    --n6:#6E7B8B; --n7:#4E5A68; --n8:#303133;
+    --page:#F5F7FA; --card:#FFFFFF;
+    --r:12px;
+    --shadow:0 1px 2px rgba(48,49,51,.04);
+    --shadow-h:0 10px 26px rgba(0,129,255,.10);
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:var(--page); color:var(--n8);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    font-size:14px; line-height:1.6; -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit; text-decoration:none}
+  .wrap{width:100%; max-width:1080px; margin:0 auto; padding:0 24px}
+
+  /* ---------- 头部 ---------- */
+  .topbar{
+    background:#FFF;
+    background-image:linear-gradient(180deg,#F4F9FF 0%,#FFFFFF 78%);
+    border-bottom:1px solid var(--n3);
+  }
+  .topbar .wrap{padding-top:26px; padding-bottom:22px}
+  .crumb{display:flex; align-items:center; gap:8px; color:var(--n5); font-size:12px}
+  .crumb i{font-style:normal; color:var(--n4)}
+  .topbar h1{margin:10px 0 0; font-size:24px; line-height:34px; font-weight:600; letter-spacing:-.01em}
+  .topbar .sub{margin:8px 0 0; color:var(--n6); font-size:13px; line-height:22px}
+  .quick{display:flex; flex-wrap:wrap; gap:10px; margin-top:18px}
+  .qbtn{
+    display:inline-flex; align-items:center; gap:7px; height:36px; padding:0 16px;
+    border:1px solid var(--n3); border-radius:8px; background:#FFF; color:var(--n7);
+    font-size:13px; font-weight:500; transition:border-color .15s,color .15s,background .15s;
+  }
+  .qbtn:hover{border-color:var(--b6); color:var(--b7); background:#F7FBFF}
+  .qbtn.primary{border-color:var(--b6); background:var(--b6); color:#FFF}
+  .qbtn.primary:hover{background:var(--b7); border-color:var(--b7); color:#FFF}
+  .qbtn svg{display:block; width:14px; height:14px}
+
+  /* ---------- 目录：折叠条 + 右侧抽屉（纯 CSS 开合，无需脚本） ---------- */
+  .toc-cb{position:absolute; width:1px; height:1px; opacity:0; pointer-events:none}
+  .toc-bar{
+    position:sticky; top:0; z-index:30; display:block; height:46px; cursor:pointer;
+    background:rgba(245,247,250,.94);
+    backdrop-filter:saturate(180%) blur(8px);
+    border-bottom:1px solid var(--n3);
+    transition:background .15s, border-color .15s;
+  }
+  .toc-bar:hover{background:rgba(240,247,255,.96); border-bottom-color:var(--b2)}
+  .toc-bar .in{display:flex; align-items:center; gap:10px; height:100%}
+  .toc-bar .lbl{display:inline-flex; align-items:center; gap:7px; color:var(--n7); font-size:13px; font-weight:500}
+  .toc-bar .lbl svg{display:block; width:14px; height:14px; color:var(--n5)}
+  .toc-bar .hint{color:var(--n5); font-size:12px}
+  .toc-bar .chev{margin-left:auto; display:inline-flex; align-items:center; gap:5px; color:var(--n6); font-size:12px}
+  .toc-bar .chev svg{display:block; width:13px; height:13px; transition:transform .2s}
+  .toc-cb:checked ~ .toc-bar .chev svg{transform:rotate(180deg)}
+
+  .toc-mask{
+    position:fixed; inset:0; z-index:40; display:block;
+    background:rgba(31,38,48,.32);
+    opacity:0; pointer-events:none; transition:opacity .22s;
+  }
+  .toc-cb:checked ~ .toc-mask{opacity:1; pointer-events:auto}
+
+  .toc-drawer{
+    position:fixed; top:0; right:0; bottom:0; z-index:50;
+    width:320px; max-width:86vw; display:flex; flex-direction:column;
+    background:#FFF; border-left:1px solid var(--n3);
+    box-shadow:-18px 0 40px rgba(31,38,48,.10);
+    transform:translateX(100%); transition:transform .24s cubic-bezier(.32,.72,.36,1);
+  }
+  .toc-cb:checked ~ .toc-drawer{transform:translateX(0)}
+  .dr-head{display:flex; align-items:center; gap:8px; padding:15px 16px 13px; border-bottom:1px solid var(--n3)}
+  .dr-head b{font-size:14px; font-weight:600}
+  .dr-head .n{color:var(--n5); font-size:11.5px}
+  .dr-close{
+    margin-left:auto; width:26px; height:26px; border-radius:6px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; color:var(--n5);
+    transition:background .15s,color .15s;
+  }
+  .dr-close:hover{background:var(--n2); color:var(--n7)}
+  .dr-close svg{display:block; width:13px; height:13px}
+  .dr-list{padding:8px; overflow-y:auto}
+  .dr-list a{
+    display:flex; align-items:center; gap:10px; padding:10px;
+    border-radius:8px; color:var(--n7); font-size:13px;
+    transition:background .14s,color .14s;
+  }
+  .dr-list a:hover{background:#F4F9FF; color:var(--b7)}
+  .dr-list a .no{flex:0 0 auto; width:20px; color:var(--n5); font-size:11px; font-variant-numeric:tabular-nums; letter-spacing:.03em}
+  .dr-list a .cnt{margin-left:auto; color:var(--n5); font-size:11px; font-variant-numeric:tabular-nums}
+  .dr-foot{margin-top:auto; padding:14px 16px 18px; border-top:1px solid var(--n3)}
+  .dr-foot a{
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    padding:9px 12px; margin-bottom:8px; border:1px solid var(--n3); border-radius:8px;
+    color:var(--n7); font-size:12.5px; transition:border-color .15s,color .15s,background .15s;
+  }
+  .dr-foot a:last-child{margin-bottom:0}
+  .dr-foot a:hover{border-color:var(--b6); color:var(--b7); background:#F7FBFF}
+  .dr-foot a svg{display:block; width:12px; height:12px; color:var(--n5)}
+
+  /* ---------- 分区 ---------- */
+  main{padding:30px 0 10px}
+  section{margin-bottom:40px; scroll-margin-top:60px}
+  .shead{display:flex; align-items:baseline; gap:10px; margin-bottom:4px}
+  .shead .no{
+    flex:0 0 auto; font-size:12px; font-weight:600; color:var(--b6);
+    font-variant-numeric:tabular-nums; letter-spacing:.04em;
+  }
+  .shead h2{margin:0; font-size:17px; line-height:26px; font-weight:600}
+  .shead .count{
+    margin-left:2px; padding:0 6px; border-radius:4px; background:var(--n2);
+    color:var(--n6); font-size:11px; line-height:18px; font-weight:500;
+  }
+  .sdesc{margin:0 0 16px 26px; color:var(--n6); font-size:12.5px; line-height:20px}
+
+  /* ---------- 文件卡片 ---------- */
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:12px}
+  .grid.one{grid-template-columns:1fr}
+  .file{
+    display:flex; flex-direction:column; min-width:0;
+    padding:14px 16px; border:1px solid var(--n3); border-radius:var(--r);
+    background:var(--card); box-shadow:var(--shadow);
+    transition:border-color .16s, box-shadow .16s, transform .16s;
+  }
+  .file:hover{border-color:var(--b6); box-shadow:var(--shadow-h); transform:translateY(-1px)}
+  .file .fhead{display:flex; align-items:center; gap:8px; margin-bottom:9px}
+  .ext{
+    padding:0 6px; border-radius:4px; background:var(--b1); color:var(--b7);
+    font-size:10px; font-weight:600; line-height:18px; letter-spacing:.03em;
+  }
+  .ext.txt{background:#F3F0FF; color:#6A54D8}
+  .ext.web{background:#E9F7EF; color:#1D8A52}
+    .file .size{margin-left:auto; color:var(--n5); font-size:11px; font-variant-numeric:tabular-nums}
+  .file b{
+    display:block; color:var(--n8); font-size:13.5px; line-height:20px; font-weight:600;
+    word-break:break-all;
+  }
+  .file small{display:block; margin-top:5px; color:var(--n6); font-size:12px; line-height:19px}
+  .file small strong{font-weight:600; color:var(--n7)}
+  .file small code, .tl-body code{
+    padding:0 4px; border-radius:3px; background:var(--n1); border:1px solid var(--n3);
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11px; color:var(--n6);
+    word-break:break-all;
+  }
+  .file .fmeta{
+    display:flex; align-items:center; gap:8px; margin-top:12px; padding-top:10px;
+    border-top:1px dashed var(--n3); color:var(--n5); font-size:11px;
+    font-variant-numeric:tabular-nums;
+  }
+  .file .fmeta .tag{
+    padding:0 6px; border-radius:3px; background:var(--n1); color:var(--n6);
+    line-height:17px; font-size:10.5px;
+  }
+  .file .fmeta .tag.blue{background:var(--b1); color:var(--b7)}
+  .file .fmeta .tag.gray{background:#F4F5F7; color:var(--n5)}
+  .path{
+    margin-top:10px; padding:7px 9px; border-radius:6px; background:var(--n1);
+    color:var(--n6); font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:11px; line-height:17px; word-break:break-all;
+  }
+  /* 在线链接的地址过长时单行省略，不用把 ID 尾巴折到第二行 */
+  .file[href^="http"] .path{white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+
+  /* ---------- 时间轴 ---------- */
+  .timeline{position:relative; margin:0 0 18px 8px; padding-left:22px}
+  .timeline::before{
+    content:""; position:absolute; left:5px; top:6px; bottom:8px; width:1px; background:var(--n3);
+  }
+  .tl-item{position:relative; padding:0 0 16px 0}
+  .tl-item:last-child{padding-bottom:0}
+  .tl-item::before{
+    content:""; position:absolute; left:-21px; top:5px; width:9px; height:9px;
+    border-radius:50%; background:#FFF; border:2px solid var(--n4);
+  }
+  .tl-item.done::before{border-color:var(--b6); background:var(--b6)}
+  .tl-item.now::before{border-color:var(--b6); background:#FFF; box-shadow:0 0 0 4px rgba(0,129,255,.14)}
+  .tl-time{color:var(--n5); font-size:11px; font-variant-numeric:tabular-nums}
+  .tl-body{margin-top:2px}
+  .tl-body b{font-size:13px; font-weight:600; color:var(--n8)}
+  .tl-body p{margin:3px 0 0; color:var(--n6); font-size:12px; line-height:19px}
+  .tl-snap{
+    display:inline-block; margin-top:6px; padding:1px 7px; border-radius:4px;
+    background:var(--n1); border:1px solid var(--n3); color:var(--n6);
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11px;
+  }
+  .tl-snap:hover{border-color:var(--b6); color:var(--b7); background:#F7FBFF}
+
+  /* ---------- 提示条 ---------- */
+  .note{
+    display:flex; gap:10px; padding:12px 14px; border-radius:10px;
+    background:#FFFBE9; border:1px solid #F3E3B0; color:#7A6114; font-size:12.5px; line-height:20px;
+  }
+  .note.blue{background:#F4F9FF; border-color:#D6EAFF; color:#1A5FA8}
+  .note svg{flex:0 0 15px; width:15px; height:15px; margin-top:2px}
+
+  /* ---------- 页脚 ---------- */
+  footer{
+    margin-top:10px; padding:22px 0 40px; border-top:1px solid var(--n3);
+    color:var(--n5); font-size:12px; line-height:20px;
+  }
+  footer b{color:var(--n6); font-weight:500}
+
+  @media (max-width:760px){
+    .topbar h1{font-size:20px; line-height:30px}
+    .grid{grid-template-columns:1fr}
+    .sdesc{margin-left:0}
+    .toc-bar .hint{display:none}
+  }
+</style>
+</head>
+<body>
+
+<input class="toc-cb" type="checkbox" id="tocToggle" aria-label="展开目录">
+
+<header class="topbar">
+  <div class="wrap">
+    <div class="crumb"><span>工业 AI 平台</span><i>/</i><span>智能数据预测</span><i>/</i><span>产出索引</span></div>
+    <h1>智能数据预测 · 本对话产出索引</h1>
+    <p class="sub">2026-11-16 — 2026-11-18　·　共 16 个文件　·　合计约 13.3 MB</p>
+
+    <div class="quick">
+      <a class="qbtn primary" href="./智能数据预测设计稿-20261117-v1.html" target="_blank">
+        <svg viewBox="0 0 14 14" fill="none"><path d="M3 7h8M7.5 3.5L11 7l-3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        打开主设计稿
+      </a>
+      <a class="qbtn" href="./智能数据预测-对话页冷启动方案-20261118.html" target="_blank">
+        <svg viewBox="0 0 14 14" fill="none"><rect x="2" y="2.5" width="10" height="9" rx="1.6" stroke="currentColor" stroke-width="1.3"/><path d="M5 5.5h4M5 8h2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        冷启动方案比对
+      </a>
+    </div>
+  </div>
+</header>
+
+<label class="toc-bar" for="tocToggle">
+  <span class="wrap" style="display:flex">
+    <span class="in">
+      <span class="lbl">
+        <svg viewBox="0 0 14 14" fill="none"><path d="M2.5 4h9M2.5 7h9M2.5 10h6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        目录
+      </span>
+      <span class="hint">5 个类目 · 点击展开</span>
+      <span class="chev">
+        展开
+        <svg viewBox="0 0 13 13" fill="none"><path d="M3 5l3.5 3.5L10 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+    </span>
+  </span>
+</label>
+
+<label class="toc-mask" for="tocToggle" aria-hidden="true"></label>
+
+<aside class="toc-drawer" role="dialog" aria-label="目录">
+  <div class="dr-head">
+    <b>目录</b>
+    <span class="n">5 个类目 · 17 个文件</span>
+    <label class="dr-close" for="tocToggle" title="收起">
+      <svg viewBox="0 0 13 13" fill="none"><path d="M3 3l7 7M10 3l-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </label>
+  </div>
+
+  <div class="dr-list">
+    <a href="#s1" onclick="document.getElementById('tocToggle').checked=false">
+      <span class="no">01</span><span>设计主稿</span><span class="cnt">1</span>
+    </a>
+    <a href="#s2" onclick="document.getElementById('tocToggle').checked=false">
+      <span class="no">02</span><span>版本迭代轨迹</span><span class="cnt">8</span>
+    </a>
+    <a href="#s3" onclick="document.getElementById('tocToggle').checked=false">
+      <span class="no">03</span><span>方案比对</span><span class="cnt">1</span>
+    </a>
+    <a href="#s4" onclick="document.getElementById('tocToggle').checked=false">
+      <span class="no">04</span><span>需求输入</span><span class="cnt">2</span>
+    </a>
+    <a href="#s5" onclick="document.getElementById('tocToggle').checked=false">
+      <span class="no">05</span><span>参考与中间产物</span><span class="cnt">5</span>
+    </a>
+  </div>
+
+  <div class="dr-foot">
+    <a href="./智能数据预测设计稿-20261117-v1.html" target="_blank">
+      主设计稿
+      <svg viewBox="0 0 12 12" fill="none"><path d="M4 2.5h5.5V8M9.5 2.5L3 9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+    <a href="./智能数据预测-对话页冷启动方案-20261118.html" target="_blank">
+      冷启动方案比对
+      <svg viewBox="0 0 12 12" fill="none"><path d="M4 2.5h5.5V8M9.5 2.5L3 9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+  </div>
+</aside>
+
+<main class="wrap">
+
+  <!-- 01 设计主稿 -->
+  <section id="s1">
+    <div class="shead"><span class="no">01</span><h2>设计主稿</h2><span class="count">1 个文件</span></div>
+    <p class="sdesc">整份需求只维护这一个 HTML，所有迭代都落在它身上。单文件自包含，双击 file:// 即可渲染。</p>
+
+    <div class="grid one">
+      <a class="file" href="./智能数据预测设计稿-20261117-v1.html" target="_blank">
+        <div class="fhead"><span class="ext">HTML</span><span class="size">1023 KB</span></div>
+        <b>智能数据预测设计稿-20261117-v1.html</b>
+        <small>
+          当前唯一交付稿。含：BOE 侧边导航（8 个一级 / 6 个二级）、数据列表页（BOE 筛选组件 + 组件库原生分页）、
+          对话页（60px 状态顶栏、执行记录默认收起、方案 A 冷启动）、条件确认卡、数据核对页、结果页三页签、数据源抽屉。
+        </small>
+        <div class="fmeta">
+          <span>2026-11-18 11:04</span>
+          <span class="tag blue">主交付</span>
+          <span class="tag">单文件</span>
+          <span class="tag">状态在 localStorage</span>
+        </div>
+        <div class="path">智能数据预测/智能数据预测设计稿-20261117-v1.html</div>
+      </a>
+    </div>
+  </section>
+
+  <!-- 02 版本轨迹 -->
+  <section id="s2">
+    <div class="shead"><span class="no">02</span><h2>版本迭代轨迹</h2><span class="count">8 个快照</span></div>
+    <p class="sdesc">每轮改动前自动备份一份「改动前」快照，都可直接双击打开对照。下面是按时间正序的 8 次改动，末尾即当前主稿。</p>
+
+    <div class="timeline">
+      <div class="tl-item done">
+        <div class="tl-time">2026-11-17 11:25</div>
+        <div class="tl-body">
+          <b>修复白屏：静态首屏兜底</b>
+          <p>侧边栏与主内容原本是空容器、完全依赖脚本渲染，脚本一挂就白屏。改为把渲染结果直接写进 HTML，成为后续所有改动的强制约定。</p>
+          <a class="tl-snap" href="../.workbuddy/backups/智能数据预测设计稿-20261117-v1-静态首屏修复前.html" target="_blank">…-静态首屏修复前.html · 792 KB</a>
+        </div>
+      </div>
+
+      <div class="tl-item done">
+        <div class="tl-time">2026-11-17 13:20</div>
+        <div class="tl-body">
+          <b>替换为组件库侧边导航</b>
+          <p>改用 BOE 基础页面架构（side-blue 骨架）：展开 192px / 收起 80px、二级浮层 144px、图标 sprite、折叠状态持久化，一级项名称与个数沿用原型。</p>
+          <a class="tl-snap" href="../.workbuddy/backups/智能数据预测设计稿-20261117-v1-新版侧边导航替换前.html" target="_blank">…-新版侧边导航替换前.html · 850 KB</a>
+        </div>
+      </div>
+
+      <div class="tl-item done">
+        <div class="tl-time">2026-11-17 15:34</div>
+        <div class="tl-body">
+          <b>表格五项细节 + 分页固定右下</b>
+          <p>任务名 N8 纯文本去链接、更新时间去蓝、更多改蓝、预测跨度左对齐、页码选择器固定在内容区右下。</p>
+          <a class="tl-snap" href="../.workbuddy/backups/智能数据预测设计稿-20261117-v1-表格分页细节调整前.html" target="_blank">…-表格分页细节调整前.html · 990 KB</a>
+        </div>
+      </div>
+
+      <div class="tl-item done">
+        <div class="tl-time">2026-11-17 15:42</div>
+        <div class="tl-body">
+          <b>对话模块换资料库样例样式</b>
+          <p>复用「对话模块样例」的消息流语义：820px 消息列、浅灰 / 白气泡、紫色 AI 头像，功能逻辑不变，只换皮。</p>
+          <a class="tl-snap" href="../.workbuddy/backups/智能数据预测设计稿-20261117-v1-对话模块样式替换前.html" target="_blank">…-对话模块样式替换前.html · 993 KB</a>
+        </div>
+      </div>
+
+      <div class="tl-item done">
+        <div class="tl-time">2026-11-17 17:50</div>
+        <div class="tl-body">
+          <b>输入框精确对齐样例</b>
+          <p>820×132、16px 圆角、#FCFCFC 底、<code>0 10px 30px rgba(135,153,172,.149)</code> 阴影、36px 圆形渐变发送按钮、左下「+」入口。</p>
+          <a class="tl-snap" href="../.workbuddy/backups/智能数据预测设计稿-20261117-v1-输入框样式优化前.html" target="_blank">…-输入框样式优化前.html · 1001 KB</a>
+        </div>
+      </div>
+
+      <div class="tl-item done">
+        <div class="tl-time">2026-11-18 09:12</div>
+        <div class="tl-body">
+          <b>对话页顶栏 60px + 执行记录默认收起</b>
+          <p>顶栏由 90px 收到 60px（纵向 flex，任务名输入框 28px）；<code>traceOpen</code> 初值改 false，右侧执行记录点击才展开。</p>
+          <a class="tl-snap" href="../.workbuddy/backups/智能数据预测设计稿-20261117-v1-顶栏60px前.html" target="_blank">…-顶栏60px前.html · 1004 KB</a>
+        </div>
+      </div>
+
+      <div class="tl-item done">
+        <div class="tl-time">2026-11-18 09:27</div>
+        <div class="tl-body">
+          <b>分页器改用组件库原生 4-6-pagination</b>
+          <p>从 <code>pagination-module.css</code> 抽取组件区块内联，DOM 与页码窗口算法照 <code>pagination-module-runtime.js</code>；只在外层加 <code>.pagination-dock</code> 定位 24/24。</p>
+          <a class="tl-snap" href="../.workbuddy/backups/智能数据预测设计稿-20261117-v1-分页组件替换前.html" target="_blank">…-分页组件替换前.html · 1021 KB</a>
+        </div>
+      </div>
+
+      <div class="tl-item done">
+        <div class="tl-time">2026-11-18 10:37</div>
+        <div class="tl-body">
+          <b>冷启动按方案 A 落地</b>
+          <p>垂直居中的欢迎区、带图标与条件标签的三张场景卡、胶囊入口、信任条；点卡改为「填句不直发」，输入框去预填。</p>
+          <a class="tl-snap" href="../.workbuddy/backups/智能数据预测设计稿-20261117-v1-冷启动方案A前.html" target="_blank">…-冷启动方案A前.html · 1016 KB</a>
+        </div>
+      </div>
+
+      <div class="tl-item now">
+        <div class="tl-time">2026-11-18 11:04　当前</div>
+        <div class="tl-body">
+          <b>主稿（最新状态）</b>
+          <p>以上 8 次改动全部叠加后的结果，即 01 区的设计主稿。</p>
+          <a class="tl-snap" href="./智能数据预测设计稿-20261117-v1.html" target="_blank">智能数据预测设计稿-20261117-v1.html · 1023 KB</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="note">
+      <svg viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="6" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 6.6v3.6M7.5 4.8v.9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      <span>这些快照是「改动前」的完整页面，本身都能独立打开，可作为回归对比基线；确认不再需要旧版后可整批清理，不影响主稿。</span>
+    </div>
+  </section>
+
+  <!-- 03 方案比对 -->
+  <section id="s3">
+    <div class="shead"><span class="no">03</span><h2>方案比对</h2><span class="count">1 个文件</span></div>
+    <p class="sdesc">针对「对话页冷启动（空态）」做的评审稿：现状诊断 5 条 + 四版可交互方案 + 三栏注释 + 结论对比表。</p>
+
+    <div class="grid one">
+      <a class="file" href="./智能数据预测-对话页冷启动方案-20261118.html" target="_blank">
+        <div class="fhead"><span class="ext">HTML</span><span class="size">53.7 KB</span></div>
+        <b>智能数据预测-对话页冷启动方案-20261118.html</b>
+        <small>
+          页签切换 A / B / C / D 四版：<strong>A 居中式引导</strong>（已落地）、<strong>B 三段式填空</strong>（chip 实时成句）、
+          <strong>C 工作台式</strong>（最近任务 + 快捷入口 + 数据源状态）、<strong>D 示例预演</strong>（示例对话内嵌条件卡）。
+          每版都带 672px 高的模拟对话页与交互要点 / 视觉要点 / 成本三栏，底部是选型对比表与组合建议。
+        </small>
+        <div class="fmeta">
+          <span>2026-11-18 10:47</span>
+          <span class="tag blue">可交互</span>
+          <span class="tag">四版对比</span>
+          <span class="tag">结论：A 为主 + C 抽条 + B/D 做浮层</span>
+        </div>
+        <div class="path">智能数据预测/智能数据预测-对话页冷启动方案-20261118.html</div>
+      </a>
+    </div>
+  </section>
+
+  <!-- 04 需求输入 -->
+  <section id="s4">
+    <div class="shead"><span class="no">04</span><h2>需求输入</h2><span class="count">2 个文件</span></div>
+    <p class="sdesc">对话开始时收到的原始材料，位于桌面原目录、只读，不在本工作区内，未做任何修改。</p>
+
+    <div class="grid">
+      <a class="file" href="file:///Users/gaicibi/Desktop/%E6%85%95%E7%9A%84%E5%B7%A5%E4%BD%9C%E6%96%87%E4%BB%B6/06_2026/%E5%B7%A5%E4%B8%9A%20AI%20%E5%B9%B3%E5%8F%B0%20-%20AI%20%E6%B5%81%E7%A8%8B/%E6%99%BA%E8%83%BD%E6%95%B0%E6%8D%AE%E9%A2%84%E6%B5%8B/%E5%8E%9F%E5%9E%8B%20V1/%E6%99%BA%E8%83%BD%E6%95%B0%E6%8D%AE%E9%A2%84%E6%B5%8B-20261112-v12(1).html" target="_blank">
+        <div class="fhead"><span class="ext">HTML</span><span class="size">771 KB</span></div>
+        <b>智能数据预测-20261112-v12(1).html</b>
+        <small>需求方给的原型 V1，本次改造的源头。设计稿的导航结构、业务流程、任务数据模型均以它为准。</small>
+        <div class="fmeta"><span>2026-11-16 14:03</span><span class="tag gray">外部输入 · 只读</span></div>
+        <div class="path">~/Desktop/慕的工作文件/06_2026/工业 AI 平台 - AI 流程/智能数据预测/原型 V1/</div>
+      </a>
+
+      <a class="file" href="file:///Users/gaicibi/Desktop/%E6%85%95%E7%9A%84%E5%B7%A5%E4%BD%9C%E6%96%87%E4%BB%B6/06_2026/%E5%B7%A5%E4%B8%9A%20AI%20%E5%B9%B3%E5%8F%B0%20-%20AI%20%E6%B5%81%E7%A8%8B/%E6%99%BA%E8%83%BD%E6%95%B0%E6%8D%AE%E9%A2%84%E6%B5%8B/%E5%8E%9F%E5%9E%8B%20V1/%E6%99%BA%E8%83%BD%E6%95%B0%E6%8D%AE%E9%A2%84%E6%B5%8B-%E4%BA%A4%E4%BA%92%E8%AF%B4%E6%98%8E-20261112-v12(1).html" target="_blank">
+        <div class="fhead"><span class="ext">HTML</span><span class="size">30.2 KB</span></div>
+        <b>智能数据预测-交互说明-20261112-v12(1).html</b>
+        <small>配套的交互说明文档：字段口径、状态流转、各步骤的交互约定，是需求讲解与后续验收的依据。</small>
+        <div class="fmeta"><span>2026-11-16 14:03</span><span class="tag gray">外部输入 · 只读</span></div>
+        <div class="path">~/Desktop/慕的工作文件/06_2026/工业 AI 平台 - AI 流程/智能数据预测/原型 V1/</div>
+      </a>
+    </div>
+
+    <div style="margin-top:12px">
+      <div class="note blue">
+        <svg viewBox="0 0 15 15" fill="none"><path d="M7.5 1.8l5.2 2v4.3c0 3-2.1 5.4-5.2 6.4-3.1-1-5.2-3.4-5.2-6.4V3.8l5.2-2z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+        <span>对话内还产出过三张分析图（用户旅程图、功能信息架构图、任务流程图），是内联渲染的可视化，没有落成独立文件；需要的话可以补导出成 SVG / PNG。</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 05 参考与中间产物 -->
+  <section id="s5" style="margin-bottom:26px">
+    <div class="shead"><span class="no">05</span><h2>参考与中间产物</h2><span class="count">5 个文件</span></div>
+    <p class="sdesc">在线参考、样式参照物与构建脚本。不是交付物，但重做同类改动时会用到。</p>
+
+    <div class="grid">
+      <a class="file" href="https://www.workbuddy.cn/space/d/qx7YJedDmf8j93Ji4TXE0I" target="_blank" rel="noopener">
+        <div class="fhead"><span class="ext web">在线</span><span class="size">资料库网页</span></div>
+        <b>对话模块样例</b>
+        <small>对话消息流与输入框的原始设计样例（资料库在线页）。当前对话页的气泡、消息列宽、输入框尺寸／圆角／阴影／配色均以此为准；下面 <code>chat-panel-spec.html</code> 是它的本地 Pixso 导出稿。</small>
+        <div class="fmeta"><span>2026-11-17 更新</span><span class="tag blue">一手来源</span></div>
+        <div class="path">workbuddy.cn/space/d/qx7YJedDmf8j93Ji4TXE0I</div>
+      </a>
+      <a class="file" href="../.workbuddy/tmp/dialog-sample-20261117/chat-panel-spec.html" target="_blank">
+        <div class="fhead"><span class="ext">HTML</span><span class="size">3.92 MB</span></div>
+        <b>chat-panel-spec.html</b>
+        <small>上面那份在线样例的本地 Pixso 导出稿。离线时用它对尺寸、圆角、阴影与配色，比在线页更方便量取像素。</small>
+        <div class="fmeta"><span>2026-11-17 17:41</span><span class="tag">本地副本</span></div>
+        <div class="path">.workbuddy/tmp/dialog-sample-20261117/</div>
+      </a>
+
+      <div class="file">
+        <div class="fhead"><span class="ext txt">PY</span><span class="size">6.5 KB</span></div>
+        <b>build-split.py</b>
+        <small>拆分构建脚本：以主稿为源注入 <code>PAGE_MODE</code>、改路由不改业务逻辑。拆分已废弃，脚本留作参考。</small>
+        <div class="fmeta"><span>2026-11-18 09:30</span><span class="tag gray">已停用</span></div>
+        <div class="path">.workbuddy/tmp/split/build-split.py</div>
+      </div>
+
+      <div class="file">
+        <div class="fhead"><span class="ext txt">PY</span><span class="size">5.1 KB</span></div>
+        <b>patch-pagination.py</b>
+        <small>分页替换脚本：抽取组件库 <code>4-6-pagination</code> 样式块、改作用域、替换旧手写分页并重写 DOM。</small>
+        <div class="fmeta"><span>2026-11-18 10:32</span><span class="tag">可复用</span></div>
+        <div class="path">.workbuddy/tmp/split/patch-pagination.py</div>
+      </div>
+
+      <div class="file">
+        <div class="fhead"><span class="ext">HTML</span><span class="size">11 KB</span></div>
+        <b>task-static.html</b>
+        <small>任务页静态首屏快照：删掉全部脚本后页面长什么样，就是它。用于兜底防白屏。</small>
+        <div class="fmeta"><span>2026-11-18 09:28</span><span class="tag">中间产物</span></div>
+        <div class="path">.workbuddy/tmp/split/task-static.html</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <b>说明</b>　本索引页本身也是单文件，可随时增删条目。<br>
+    路径约定：相对于本文件所在目录（<code>智能数据预测/</code>）；带 <code>~/Desktop</code> 的是工作区外的原始需求材料。<br>
+    统计口径：17 个文件 = 主稿 1 + 版本快照 8 + 方案比对 1 + 需求输入 2 + 参考与中间产物 5（含 1 份资料库在线参考）。
+  </div>
+</footer>
+
+</body>
+</html>

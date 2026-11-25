@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>核对数据与字段 · 抽屉方案 v3</title>
+<style>
+:root{
+  --blue:#0081FF; --blue-1:#E6F2FF; --blue-2:#EAF3FF; --blue-line:#B9D8FF; --blue-h:#0073E6;
+  --amber:#D59B2E; --amber-bg:#FFFBEF; --amber-line:#F0D9A8; --amber-t:#8A5A0F;
+  --grn:#00C25B; --grn-bg:#E6FFF2; --grn-bg2:#F3FDF8; --grn-line:#46DB8C; --grn-t:#007537;
+  --lk-bg:#F5F6F8; --lk-t:#AAB1BB;
+  --t1:#303133; --t2:#606266; --t3:#909399; --line:#E4E7ED; --line-2:#EBEEF5; --bg:#EDF0F5;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;}
+body{background:var(--bg);font:14px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;color:var(--t1);-webkit-font-smoothing:antialiased;}
+.wrap{max-width:1000px;margin:0 auto;padding:28px 24px 72px;}
+.head h1{margin:0 0 6px;font-size:20px;font-weight:600;letter-spacing:.2px;}
+.head p{margin:0;color:#737985;font-size:13px;}
+.diag{margin:16px 0 20px;padding:14px 16px;background:#fff;border:1px solid var(--line-2);border-radius:8px;}
+.diag>b{display:block;font-size:12.5px;color:var(--t2);margin-bottom:8px;}
+.diag ol{margin:0;padding-left:18px;color:#737985;font-size:12.5px;line-height:1.95;}
+.diag code{font:11.5px/1 Consolas,Monaco,monospace;background:#F2F4F7;padding:1px 4px;border-radius:3px;color:var(--t2);}
+
+/* ---------- 抽屉外壳 ---------- */
+.stage{padding:24px 0;display:flex;justify-content:center;overflow-x:auto;}
+.drawer{width:920px;flex:0 0 920px;background:#fff;border:1px solid var(--line);border-radius:8px;overflow:hidden;box-shadow:0 10px 28px rgba(31,38,48,.07);}
+.dw-head{display:flex;align-items:center;gap:16px;padding:15px 20px;border-bottom:1px solid var(--line-2);}
+.dw-title h2{margin:0;font-size:16px;font-weight:600;}
+.dw-title p{margin:4px 0 0;font-size:12px;color:var(--t3);}
+.dw-close{width:28px;height:28px;margin-left:auto;border:0;background:none;color:var(--t3);font-size:18px;line-height:1;cursor:pointer;border-radius:4px;}
+.dw-close:hover{background:#F5F7FA;color:var(--t1);}
+
+.dw-body{padding:16px 20px 18px;}
+.blk+.blk{margin-top:18px;padding-top:16px;border-top:1px solid var(--line-2);}
+.blk-head{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.blk-head b{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:600;}
+.blk-head b i{display:inline-block;width:3px;height:14px;border-radius:2px;background:var(--blue);}
+.blk-stat{margin-left:auto;font-size:12px;color:var(--t3);}
+.blk-stat b{font-size:14px;color:var(--t1);font-weight:600;margin-right:2px;}
+
+/* ---------- 步骤 1 ---------- */
+.bar{display:flex;align-items:center;gap:12px;margin-bottom:8px;}
+.modes{display:inline-flex;border:1px solid var(--line);border-radius:4px;overflow:hidden;flex:0 0 auto;}
+.modes button{font:12px/1 inherit;font-family:inherit;padding:7px 12px;border:0;background:#fff;color:var(--t2);cursor:pointer;}
+.modes button.is-on{background:var(--blue-1);color:var(--blue);}
+.tpick{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--t2);flex:0 0 auto;}
+.tpick .boe-select{width:168px;}
+.legend{margin-left:auto;display:flex;align-items:center;gap:12px;font-size:12px;color:var(--t3);flex:0 0 auto;}
+.legend i{width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:4px;vertical-align:-1px;}
+.lg-f{background:var(--blue-1);border:1px solid var(--blue-line);}
+.lg-t{background:var(--grn-bg);border:1px solid var(--grn-line);}
+.lg-n{background:#fff;border:1px solid var(--line);}
+.lg-l{background:var(--lk-bg);border:1px solid #DDE1E7;}
+.tip{margin:0 0 10px;font-size:12px;color:var(--t3);}
+
+.tscroll{overflow:auto;border:1px solid var(--line);border-radius:4px;}
+.ptable{border-collapse:separate;border-spacing:0;table-layout:fixed;width:max-content;font-size:12px;}
+.ptable th,.ptable td{width:152px;padding:7px 10px;border-right:1px solid var(--line);border-bottom:1px solid var(--line-2);text-align:left;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ptable thead th{background:#FAFBFC;vertical-align:top;cursor:pointer;user-select:none;}
+.ptable thead th:hover{background:#F4F7FA;}
+.ptable th.row-ix,.ptable td.row-ix{width:44px;position:sticky;left:0;z-index:2;text-align:center;color:var(--t3);cursor:default;}
+.ptable th.row-ix{background:#FAFBFC;}
+.ptable td.row-ix{background:#fff;}
+.ptable.dragging{user-select:none;}
+.th-role{display:flex;align-items:center;gap:5px;font-size:11px;line-height:1.6;color:var(--t3);}
+.rb{flex:0 0 auto;width:11px;height:11px;border:1px solid #C0C4CC;border-radius:2px;background:#fff;position:relative;}
+.rb.on{background:var(--blue);border-color:var(--blue);}
+.rb.on:after{content:'';position:absolute;left:2.5px;top:1px;width:3px;height:5.5px;border:1.5px solid #fff;border-top:0;border-left:0;transform:rotate(45deg);}
+.rb.radio{border-radius:50%;border-color:#C0C4CC;}
+.rb.radio.on{background:#fff;border:3.5px solid var(--grn);}
+.rb.radio.on:after{display:none;}
+.rb.lock{background:#E9EBEF;border-color:#D8DCE2;}
+.rb.lock:after{content:'';position:absolute;left:2px;right:2px;top:4px;height:1px;background:#B0B6BF;}
+.th-name{display:block;font:600 12px/1.85 Consolas,Monaco,monospace;color:var(--t1);}
+.th-cn{display:block;font-size:11px;line-height:1.6;color:var(--t3);}
+.th-set{font-size:11px;color:var(--blue);background:none;border:0;padding:2px 0 0;cursor:pointer;font-family:inherit;}
+.th-set:hover{color:var(--blue-h);text-decoration:underline;}
+.th-cur{display:block;font-size:11px;color:var(--grn-t);padding:2px 0 0;}
+.th-lock{display:block;font-size:11px;color:#B5BBC4;padding-top:2px;}
+.ptable thead th.role-feature{background:#F1F8FF;box-shadow:inset 0 2px 0 var(--blue);}
+.ptable thead th.role-feature:hover{background:#E9F4FF;}
+th.role-feature .th-role{color:var(--blue);}
+.ptable thead th.role-target{background:var(--grn-bg);box-shadow:inset 0 2px 0 var(--grn);}
+.ptable thead th.role-target:hover{background:#DAFBEB;}
+th.role-target .th-role{color:var(--grn-t);}
+th.role-target .th-set{color:var(--grn-t);}
+.ptable thead th.is-lock{background:var(--lk-bg);cursor:not-allowed;}
+.ptable thead th.is-lock:hover{background:var(--lk-bg);}
+th.is-lock .th-name{color:#8E959F;}
+th.is-lock .th-role,th.is-lock .th-cn{color:var(--lk-t);}
+td.role-feature{background:#F1F8FF;}
+td.role-target{background:var(--grn-bg2);color:var(--t1);font-weight:600;}
+td.is-lock{background:#FAFBFC;color:#B0B6BF;}
+.cell-empty{color:#C0C4CC;}
+
+.tfoot{display:flex;align-items:center;justify-content:space-between;margin-top:8px;font-size:12px;color:var(--t3);}
+.pager{display:flex;align-items:center;gap:6px;}
+.pager select{height:26px;border:1px solid var(--line);border-radius:4px;background:#fff;color:var(--t2);font:12px inherit;font-family:inherit;padding:0 4px;cursor:pointer;}
+.pager button{width:26px;height:26px;border:1px solid var(--line);border-radius:4px;background:#fff;color:var(--t2);cursor:pointer;line-height:1;}
+.pager button:hover:not(:disabled){border-color:#AFB8C6;}
+.pager button:disabled{color:#C0C4CC;cursor:not-allowed;}
+.pager .pnow{min-width:44px;text-align:center;color:var(--t2);}
+
+.sum{margin-top:12px;padding:10px 12px;border:1px solid var(--line);border-radius:4px;background:#FCFDFE;}
+.sum-row{display:flex;align-items:flex-start;gap:10px;}
+.sum-row+.sum-row{margin-top:8px;}
+.sum-k{flex:0 0 86px;font-size:12px;color:var(--t3);line-height:22px;}
+.sum-k b{color:var(--t1);font-weight:600;}
+.chips{display:flex;flex-wrap:wrap;gap:6px;flex:1;min-width:0;}
+.chip{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 6px 0 8px;border-radius:3px;background:var(--blue-2);border:1px solid var(--blue-line);color:#2C5F8A;font:11.5px/1 Consolas,Monaco,monospace;}
+.chip.target{background:var(--grn-bg);border-color:var(--grn-line);color:var(--grn-t);}
+.chip[data-goto]{cursor:pointer;}
+.chip[data-goto]:hover{border-color:#8AC5FF;}
+.chip.target[data-goto]:hover{border-color:var(--grn);}
+.chip button{border:0;background:none;color:#7FA6C9;cursor:pointer;font-size:13px;line-height:1;padding:0 1px;}
+.chip button:hover{color:#4B5563;}
+.sum-cn{font-size:12px;color:var(--t3);line-height:22px;}
+.sum-empty{font-size:12px;color:#C0C4CC;line-height:22px;}
+.sum-acts{margin-left:auto;display:flex;gap:12px;flex:0 0 auto;}
+.lnk{border:0;background:none;color:var(--t3);font-size:12px;cursor:pointer;padding:0;font-family:inherit;}
+.lnk:hover{color:var(--t1);}
+
+/* ---------- 步骤 2 ---------- */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.f{min-width:0;}
+.f>label{display:block;font-size:12px;color:var(--t2);margin-bottom:6px;}
+.cond{margin-top:14px;}
+.cond .grid3+.grid3{margin-top:14px;}
+.pair{display:grid;grid-template-columns:minmax(0,1fr) 10px minmax(0,1fr);gap:6px;align-items:center;}
+.pair .arrow{color:#C0C4CC;font-size:12px;text-align:center;}
+.hintline{margin:8px 0 0;font-size:12px;color:var(--t3);}
+.prev{margin-top:16px;}
+.pbar{display:flex;gap:3px;height:28px;border-radius:3px;overflow:hidden;font-size:12px;line-height:28px;text-align:center;}
+.pbar span{overflow:hidden;white-space:nowrap;}
+.pbar .tr{background:#CFE6FA;color:#176BB5;}
+.pbar .va{background:#D9EFE8;color:#1F7A64;}
+.pbar .te{background:#FBE7C4;color:var(--amber-t);}
+.pranges{display:flex;justify-content:space-between;gap:12px;margin-top:8px;font-size:12px;color:var(--t3);}
+.pranges b{color:var(--t1);font-weight:600;margin-right:6px;}
+.status{display:flex;align-items:center;gap:6px;margin-top:10px;font-size:12px;}
+.status .dot{width:6px;height:6px;border-radius:50%;flex:0 0 auto;}
+.status.ok{color:#2E7D4F;}
+.status.ok .dot{background:#3FA96A;}
+.status.err{color:#C0392B;}
+.status.err .dot{background:#E4574C;}
+
+/* ---------- footer ---------- */
+.dw-foot{display:flex;align-items:center;gap:12px;padding:13px 20px;border-top:1px solid var(--line-2);}
+.dw-sum{font-size:12px;color:var(--t3);}
+.dw-acts{margin-left:auto;display:flex;gap:8px;}
+.btn{height:32px;padding:0 14px;border-radius:4px;border:1px solid var(--line);background:#fff;color:var(--t2);font:13px inherit;font-family:inherit;cursor:pointer;}
+.btn:hover{border-color:#AFB8C6;}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff;}
+.btn.primary:hover{background:var(--blue-h);border-color:var(--blue-h);}
+
+.notes{margin-top:20px;display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.note{background:#fff;border:1px solid var(--line-2);border-radius:8px;padding:14px 16px;}
+.note>b{display:block;font-size:12.5px;color:var(--t2);margin-bottom:8px;}
+.note ul{margin:0;padding-left:16px;font-size:12.5px;line-height:1.95;color:#737985;}
+.note li b{color:var(--t1);font-weight:600;}
+.note code{font:11.5px/1 Consolas,Monaco,monospace;background:#F2F4F7;padding:1px 4px;border-radius:3px;color:var(--t2);}
+
+.toast{position:fixed;left:50%;bottom:36px;transform:translate(-50%,8px);background:rgba(48,49,51,.92);color:#fff;font-size:12px;padding:8px 14px;border-radius:4px;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:99;}
+.toast.on{opacity:1;transform:translate(-50%,0);}
+</style>
+<style id="boe-controls">
+.boe-scope{
+  --color-primary-default:#0081FF;
+  --color-primary-hover:#2E98FF;
+  --color-primary-active:#0070DE;
+  --color-primary-bg:#E6F2FF;
+  --color-blue-2:#E6F2FF;
+  --color-text-primary:#303133;
+  --color-text-secondary:#606266;
+  --color-text-tertiary:#909399;
+  --color-text-placeholder:#C0C4CC;
+  --color-text-disabled:#C0C4CC;
+  --color-neutral-white:#FFFFFF;
+  --color-bg-page:#FFFFFF;
+  --color-bg-container:#F5F7FA;
+  --color-border-base:#E1E4EB;
+  --color-border-light:#D7DAE0;
+  --color-border-strong:#C0C4CC;
+  --color-error-default:#F56C6C;
+  --color-error-bg:#FEF0F0;
+  --color-success-default:#67C23A;
+  --color-success-bg:#F0F9EB;
+  --radius-control:4px;
+  --radius-full:999px;
+  --font-family-base:"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Helvetica Neue",Arial,sans-serif;
+  --font-weight-regular:400;
+  --font-weight-medium:500;
+  --font-size-t08:14px;
+  --font-size-t09:12px;
+  --line-height-t09:20px;
+  --shadow-popup:0 -2px 8px rgba(0,0,0,.02),0 8px 14px 2px rgba(0,0,0,.06),0 5px 5px -3px rgba(0,0,0,.05);
+  --shadow-elevation-0:0 1px 2px rgba(0,0,0,.04);
+  --boe-component-input-number-accent:#0081FF;
+}
+.list-page .boe-filter-area__field .boe-input-wrap,
+.list-page .boe-filter-area__field .boe-select{ flex: 1 1 auto; width: 100%; min-width: 0; }
+.list-page .boe-filter-area__field .boe-select-trigger{ width: 100%; height: 32px; font: 14px var(--font-family-base); }
+.boe-select{ position: relative; width: 240px; max-width: 100%; font-size: 14px; color: var(--boe-component-select-text-default,var(--color-text-primary)); }
+.boe-select-trigger{ box-sizing: border-box; width: 100%; min-height: var(--boe-component-select-height,32px); display: flex; align-items: center; gap: 6px; padding: 5px 12px; background: var(--boe-component-select-background-default,var(--color-bg-page)); border: 1px solid var(--boe-component-select-border-default,var(--color-border-light)); border-radius: var(--radius-control); cursor: pointer; outline: 0; transition: border-color 100ms ease-in,box-shadow 100ms ease-in; }
+.boe-select-trigger:hover{ border-color: var(--boe-component-select-border-active,var(--color-primary-default)); }
+.boe-select.is-open .boe-select-trigger,
+.boe-select-trigger:focus-visible{ border-color: var(--boe-component-select-border-active,var(--color-primary-default)); box-shadow: none; }
+.boe-select-value{ overflow: hidden; flex: 1; color: var(--boe-component-select-text-default,var(--color-text-primary)); line-height: 20px; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+.list-page .boe-select-placeholder{ color: var(--boe-component-select-text-placeholder,var(--color-text-placeholder)); }
+.boe-select-arrow{ display: inline-flex; flex: 0 0 16px; align-items: center; justify-content: center; color: var(--color-text-tertiary); }
+.boe-select.is-open .boe-select-arrow .boe-control-chevron-down{ transform: rotate(180deg); }
+.boe-select-dropdown{ position: absolute; z-index: 30; top: calc(100% + 4px); left: 0; width: 100%; box-sizing: border-box; display: none; padding: 6px; background: var(--color-bg-page); border-radius: var(--radius-control); box-shadow: var(--shadow-popup); }
+.boe-select.is-open .boe-select-dropdown{ display: block; }
+.boe-select-options{ max-height: 224px; overflow: auto; }
+.boe-select-option{ position: relative; min-height: 28px; box-sizing: border-box; display: flex; align-items: center; padding: 2px 28px 2px 6px; border-radius: var(--radius-control); color: var(--color-text-primary); line-height: 24px; cursor: pointer; }
+.boe-select-option:hover,
+.boe-select-option.is-hover{ background: var(--color-primary-bg); }
+.boe-select-option:focus-visible{ outline: 2px solid var(--color-primary-default); outline-offset: -2px; }
+.boe-select-option.is-selected{ color: var(--color-text-primary); }
+.boe-select-option-check{ position: absolute; top: 7px; right: 8px; width: 14px; height: 14px; color: var(--color-primary-default); }
+.boe-select-option-check .boe-control-icon{ width: 14px; height: 14px; }
+.boe-control-icon{ width: 16px; height: 16px; display: block; flex: 0 0 auto; transform-origin: 50% 50%; }
+.picker-module-details[data-picker-module="date-picker"] .boe-control-suffix{
+  position: absolute;
+  inset-block: 0;
+  right: 0;
+  width: 32px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-tertiary);
+  line-height: 0;
+}
+.picker-module-details[data-picker-module="date-picker"] .boe-control-suffix--passive{ pointer-events: none; }
+.picker-module-details[data-picker-module="date-picker"] .boe-control-icon{ width: 16px; height: 16px; display: block; flex: 0 0 auto; transform-origin: 50% 50%; }
+.picker-module-details[data-picker-module="date-picker"] .boe-control-chevron-down{ transition: transform 150ms ease; }
+@media (prefers-reduced-motion: reduce){.picker-module-details[data-picker-module="date-picker"] .boe-control-chevron-down{ transition: none; }}
+.picker-module-details[data-picker-module="date-picker"] .boe-date-picker{ position: relative; width: 240px; color: var(--boe-component-date-picker-text-default, var(--color-text-primary)); font-size: 14px; }
+.picker-module-details[data-picker-module="date-picker"] .boe-date-trigger{ position: relative; width: 100%; height: var(--boe-component-date-picker-height-default, 32px); display: flex; align-items: center; padding: 0 34px 0 12px; border: 1px solid var(--boe-component-date-picker-border-default, var(--color-border-light)); border-radius: var(--radius-control); outline: 0; background: var(--boe-component-date-picker-background-default, var(--color-bg-page)); color: var(--boe-component-date-picker-text-default, var(--color-text-primary)); font: inherit; text-align: left; cursor: pointer; transition: border-color 100ms ease-in, box-shadow 100ms ease-in; }
+.picker-module-details[data-picker-module="date-picker"] .boe-date-trigger:hover{ border-color: var(--boe-component-date-picker-border-active, var(--color-primary-default)); }
+.picker-module-details[data-picker-module="date-picker"] .boe-date-trigger:focus-visible, .picker-module-details[data-picker-module="date-picker"] .boe-date-picker.is-open .boe-date-trigger{ border-color: var(--boe-component-date-picker-border-active, var(--color-primary-default)); box-shadow: 0 0 0 2px var(--color-primary-bg); }
+.picker-module-details[data-picker-module="date-picker"] .boe-date-value{ min-width: 0; overflow: hidden; flex: 1; line-height: 20px; text-overflow: ellipsis; white-space: nowrap; }
+.picker-module-details[data-picker-module="date-picker"] .boe-date-calendar{ color: var(--color-text-tertiary); }
+.picker-module-details[data-picker-module="date-picker"] .boe-control-calendar{ fill: none; stroke: currentColor; stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; }
+.picker-module-details[data-picker-module="date-picker"] .boe-date-picker.has-value:hover .boe-date-calendar{ display: none; }
+.picker-module-details[data-picker-module="date-picker"] .boe-date-picker.has-value:hover .boe-date-clear{ display: grid; }
+.picker-module-details[data-picker-module="date-picker"] .boe-date-panel{ position: absolute; z-index: 30; top: calc(100% + 4px); left: 0; width: 296px; display: none; padding: 12px; border-radius: var(--radius-control); background: var(--color-bg-page); box-shadow: var(--shadow-popup); }
+.picker-module-details[data-picker-module="date-picker"] .boe-date-picker.is-open .boe-date-panel{ display: block; }
+.picker-module-details[data-picker-module="date-picker"] .boe-date-panel-header{ height: 32px; display: grid; grid-template-columns: 28px 1fr 28px; align-items: center; margin-bottom: 8px; }
+.picker-module-details[data-picker-module="date-picker"] .boe-date-nav{ width: 28px; height: 28px; display: grid; place-items: center; padding: 0; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--color-text-tertiary); cursor: pointer; }
+.picker-module-details[data-picker-module="date-picker"] .boe-date-nav:hover, .picker-module-details[data-picker-module="date-picker"] .boe-date-nav:focus-visible{ outline: 0; background: var(--color-bg-container); color: var(--color-primary-default); }
+.picker-module-details[data-picker-module="date-picker"] .boe-date-nav svg{ width: 16px; height: 16px; }
+.picker-module-details[data-picker-module="date-picker"] .boe-date-prev svg{ transform: rotate(180deg); }
+.picker-module-details[data-picker-module="date-picker"] .boe-date-title{ color: var(--color-text-primary); font-weight: var(--font-weight-medium); text-align: center; }
+.picker-module-details[data-picker-module="date-picker"] .boe-date-week, .picker-module-details[data-picker-module="date-picker"] .boe-date-grid{ display: grid; grid-template-columns: repeat(7,32px); justify-content: space-between; }
+.picker-module-details[data-picker-module="date-picker"] .boe-date-week span{ height: 28px; display: grid; place-items: center; color: var(--color-text-tertiary); font-size: var(--font-size-t09); }
+.picker-module-details[data-picker-module="date-picker"] .boe-date-cell{ position: relative; width: 32px; height: 32px; display: grid; place-items: center; padding: 0; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--color-text-primary); font: inherit; cursor: pointer; }
+.picker-module-details[data-picker-module="date-picker"] .boe-date-panel-footer{ min-height: 36px; display: flex; align-items: flex-end; justify-content: space-between; margin: 8px -12px -12px; padding: 8px 12px; border-top: 1px solid var(--color-border-base); }
+.picker-module-details[data-picker-module="date-picker"] .boe-date-link{ padding: 0; border: 0; background: transparent; color: var(--color-primary-default); font: inherit; cursor: pointer; }
+.input-number-module-details .input-number-component-token-scope{
+  font-family: var(--font-family-base);
+  font-weight: var(--font-weight-regular);
+}
+.input-number-module-details .boe-input-number{
+  position: relative;
+  width: 184px;
+  height: 32px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 25px;
+  overflow: hidden;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-control);
+  background: var(--color-bg-page);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-elevation-0);
+  transition: border-color 100ms ease-in, box-shadow 100ms ease-in;
+}
+.input-number-module-details .boe-input-number-input{
+  width: 100%;
+  min-width: 0;
+  height: 30px;
+  padding: 0 12px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 14px;
+  line-height: var(--line-height-t09);
+  text-align: left;
+}
+.input-number-module-details .boe-input-number-input::-webkit-inner-spin-button, .input-number-module-details .boe-input-number-input::-webkit-outer-spin-button{ margin: 0; appearance: none; }
+.input-number-module-details .boe-input-number-input{ appearance: textfield; }
+.input-number-module-details .boe-input-number-actions{ display: grid; grid-template-rows: 1fr 1fr; border-left: 1px solid var(--color-border-light); background: var(--color-bg-container); }
+.input-number-module-details .boe-input-number-button{ width: 24px; min-height: 0; display: grid; place-items: center; padding: 0; border: 0; background: transparent; color: var(--color-text-tertiary); cursor: pointer; line-height: 1; }
+.input-number-module-details .boe-input-number-icon{ width: 12px; height: 12px; display: block; }
+.input-number-module-details .boe-input-number-up .boe-input-number-icon{ transform: rotate(180deg); }
+.input-number-module-details .boe-input-number-input::placeholder{ color: var(--color-text-placeholder); }
+/* 按钮交互态（组件库原值，主稿抽样式时漏了这几条） */
+.input-number-module-details .boe-input-number-button:hover:not(:disabled),
+.input-number-module-details .boe-input-number-button:focus-visible:not(:disabled){ outline: 0; background: var(--color-primary-bg); color: var(--color-primary-default); }
+.input-number-module-details .boe-input-number-button:active:not(:disabled){ background: var(--color-blue-2); color: var(--color-primary-active); }
+.input-number-module-details .boe-input-number-button:disabled{ color: var(--color-text-disabled); cursor: not-allowed; }
+/* 左右样式（compact）：左减 右加，数值居中 */
+.input-number-module-details .boe-input-number--compact{ grid-template-columns: 30px minmax(0, 1fr) 30px; }
+.input-number-module-details .boe-input-number--compact .boe-input-number-input{ padding: 0 8px; text-align: center; }
+.input-number-module-details .boe-input-number--compact > .boe-input-number-button{ width: 30px; height: 30px; background: var(--color-bg-container); }
+.input-number-module-details .boe-input-number--compact > .boe-input-number-button:first-child{ border-right: 1px solid var(--color-border-light); }
+.input-number-module-details .boe-input-number--compact > .boe-input-number-button:last-child{ border-left: 1px solid var(--color-border-light); }
+.input-number-module-details .boe-input-number--compact > .boe-input-number-button:hover:not(:disabled),
+.input-number-module-details .boe-input-number--compact > .boe-input-number-button:focus-visible:not(:disabled){ background: var(--color-primary-bg); }
+@media (prefers-reduced-motion: reduce){.input-number-module-details .boe-input-number{ transition: none; }}
+
+/* ---------- 方案 C 里用到的 BOE 控件排版（只排外壳，不改组件视觉） ---------- */
+.boe-scope .boe-field{display:flex;flex-direction:column;min-width:0;}
+.boe-scope .boe-pair{display:grid;gap:6px;align-items:center;}
+.boe-scope .boe-pair.dates{grid-template-columns:minmax(0,1fr) 12px minmax(0,1fr);}
+.boe-scope .boe-pair.hz{grid-template-columns:104px minmax(0,1fr);}
+.boe-scope .boe-pair .arrow{color:#C0C4CC;font-size:12px;text-align:center;}
+.boe-scope .boe-select,.boe-scope .boe-date-picker,.boe-scope .boe-input-number{width:100%;}
+/* 日期单元格交互态：主稿这一版缺这几条（组件库有），此处按组件库原值补上 */
+.picker-module-details[data-picker-module="date-picker"] .boe-date-cell:hover:not(:disabled){background:var(--color-bg-container);color:var(--color-primary-default);}
+.picker-module-details[data-picker-module="date-picker"] .boe-date-cell.is-today{color:var(--color-primary-default);font-weight:var(--font-weight-medium);}
+.picker-module-details[data-picker-module="date-picker"] .boe-date-cell.is-selected{background:var(--color-primary-default);color:#fff;font-weight:var(--font-weight-medium);}
+.picker-module-details[data-picker-module="date-picker"] .boe-date-cell.is-selected:hover{background:var(--color-primary-hover);color:#fff;}
+
+</style>
+<style id="local-overrides">
+.drawer .tpick .boe-select{width:168px;flex:0 0 168px;}
+</style>
+</head>
+<body>
+<svg id="boe-control-icon-sprite" xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true" focusable="false"><symbol id="boe-icon-caret-down-small" viewBox="0 0 16 16"><path d="M5.25 6.25 8 9l2.75-2.75" fill="none" stroke="currentColor" stroke-opacity=".9" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></symbol><symbol id="boe-icon-caret-right-small" viewBox="0 0 16 16"><polygon fill="currentColor" fill-opacity=".9" points="6 5 10.5 8 6 11"/></symbol><symbol id="boe-icon-calendar" viewBox="0 0 16 16"><rect x="2.25" y="3.25" width="11.5" height="10.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M5 1.75v3M11 1.75v3M2.5 6.25h11M5 8.75h1M8 8.75h1M11 8.75h1M5 11.25h1M8 11.25h1" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></symbol><symbol id="boe-icon-check" viewBox="0 0 16 16"><path fill="currentColor" fill-opacity=".9" d="M6.64237 11.5151 3 7.87281l.6743-.6743 2.96807 2.96807 5.68149-5.68149.67614.67246z"/></symbol><symbol id="boe-icon-plus-small" viewBox="0 0 16 16"><path d="M8 3.5v9M3.5 8h9" fill="none" stroke="currentColor" stroke-opacity=".9" stroke-width="1.25" stroke-linecap="round"/></symbol><symbol id="boe-icon-minus-small" viewBox="0 0 16 16"><path d="M3.5 8h9" fill="none" stroke="currentColor" stroke-opacity=".9" stroke-width="1.25" stroke-linecap="round"/></symbol></svg>
+<div class="wrap">
+
+  <div class="head">
+    <h1>「核对数据与字段」抽屉 · 方案 v3</h1>
+    <p>按原型业务重做：步骤 1 核对数据（选特征列、定目标列），步骤 2 数据划分与验证。</p>
+  </div>
+
+  <div class="diag">
+    <b>与上一版的差别</b>
+    <ol>
+      <li>步骤 1 的表格交互改回原型：表头滑选、<code>设为目标</code>、状态与底色区分，不再用勾选框改字段角色。</li>
+      <li>选完在表格下方汇总目标列与特征列名称，可逐个移除、清空、恢复推荐。</li>
+      <li>补上步骤 2：划分方式（指定日期范围 / 按时间比例）、验证方式（独立验证集 / 时间序列交叉验证），并给出训练 / 验证 / 测试的时间轴与天数。</li>
+    </ol>
+  </div>
+
+  <div class="stage">
+    <div class="drawer boe-scope">
+
+      <div class="dw-head">
+        <div class="dw-title">
+          <h2>核对数据与字段</h2>
+          <p>AYM 质量统计数据源 · v1 · 2026-07-15 ~ 2026-11-10 · 全部产品</p>
+        </div>
+        <button class="dw-close" aria-label="关闭">×</button>
+      </div>
+
+      <div class="dw-body">
+
+        <!-- ============ 步骤 1 ============ -->
+        <section class="blk">
+          <div class="blk-head">
+            <b><i></i>核对数据</b>
+            <span class="blk-stat"><b id="recTotal">119</b> 条匹配记录</span>
+          </div>
+
+          <div class="bar">
+            <div class="modes">
+              <button data-mode="feature" class="is-on">滑选特征</button>
+              <button data-mode="target">定目标列</button>
+            </div>
+            <div class="tpick"><span>目标列</span><span id="targetSel"></span></div>
+            <div class="legend"><span><i class="lg-f"></i>特征</span><span><i class="lg-t"></i>目标</span><span><i class="lg-n"></i>未选</span><span><i class="lg-l"></i>不可选</span></div>
+          </div>
+          <p class="tip">单击表头增删特征列，可多选；按住拖动连续选择。目标列单选。日期列、标识列不可选。</p>
+
+          <div class="tscroll" id="tscroll"><table class="ptable" id="ptable"></table></div>
+
+          <div class="tfoot">
+            <span>仅预览前 50 条</span>
+            <div class="pager">
+              <select id="pageSize" aria-label="每页条数">
+                <option value="10">10 条 / 页</option>
+                <option value="20">20 条 / 页</option>
+                <option value="50">50 条 / 页</option>
+              </select>
+              <button id="prev" aria-label="上一页">‹</button>
+              <span class="pnow" id="pnow">1 / 12</span>
+              <button id="next" aria-label="下一页">›</button>
+            </div>
+          </div>
+
+          <div class="sum">
+            <div class="sum-row">
+              <span class="sum-k">目标列</span>
+              <div class="chips" id="sumTarget"></div>
+            </div>
+            <div class="sum-row">
+              <span class="sum-k">特征列 <b id="featN">3</b></span>
+              <div class="chips" id="sumFeat"></div>
+              <div class="sum-acts">
+                <button class="lnk" id="clearFeat">清空</button>
+                <button class="lnk" id="recFeat">恢复推荐</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============ 步骤 2 ============ -->
+        <section class="blk">
+          <div class="blk-head">
+            <b><i></i>数据划分与验证</b>
+            <button class="lnk" id="resetSplit" style="margin-left:auto">恢复推荐</button>
+          </div>
+
+          <div class="grid2">
+            <div class="f"><label>划分方式</label><span id="selMode"></span></div>
+            <div class="f"><label>验证方式</label><span id="selMethod"></span></div>
+          </div>
+
+          <div class="cond" id="splitCond"></div>
+          <div class="prev" id="splitPreview"></div>
+        </section>
+
+      </div>
+
+      <div class="dw-foot">
+        <span class="dw-sum" id="footSum"></span>
+        <div class="dw-acts">
+          <button class="btn">返回修改条件</button>
+          <button class="btn">保存</button>
+          <button class="btn primary">开始预测</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="notes">
+    <div class="note">
+      <b>步骤 1 · 沿用原型交互</b>
+      <ul>
+        <li>表头即控件：<b>拖动滑选连续列</b>，单击增减；<b>定目标列</b>模式下点表头直接换目标。</li>
+        <li>每列表头三段：状态（特征列 / 目标列 / 日期列 / 未选）、字段名、中文名，末尾是「设为目标」。</li>
+        <li>特征列多选（勾选框），目标列单选（圆点）；日期、标识、同日结果（<code>OUTPUT_QTY</code> / <code>BK_RATE</code>）灰化不可选。</li>
+        <li>选中后列头蓝顶边 + 淡蓝底，目标列绿顶边 + 淡绿底，不可选列灰底浅字，行内单元格同步。</li>
+      </ul>
+    </div>
+    <div class="note">
+      <b>步骤 2 · 本次补齐</b>
+      <ul>
+        <li><b>划分方式</b>：指定日期范围（原型默认）或按时间比例，切换后只换条件区。</li>
+        <li><b>验证方式</b>：独立验证集，或时间序列交叉验证（折数 2–5、验证窗口 1–60 天、间隔 0–30 天，只在训练集内滚动）。</li>
+        <li>时间轴按实际日样本统计天数，训练 / 验证 / 测试三段宽度按天数分配。</li>
+        <li>校验：区间不重叠、按训练→验证→测试排列、训练 ≥ 14 天、验证与测试各 ≥ 1 天。</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+var BOE_CK = '<svg class="boe-control-icon" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M6.64 11.52 3 7.87l.67-.67 2.97 2.97 5.68-5.68.68.67z"/></svg>';
+  function boeSel(id, list, val, key){
+    var cur='', op='';
+    for(var i=0;i<list.length;i++){
+      var v=String(list[i]), on=v===String(val);
+      if(on){ cur=v; }
+      op += '<div class="boe-select-option'+(on?' is-selected':'')+'" role="option" tabindex="0" aria-selected="'+on+'" data-boe-opt data-sel="'+id+'" data-v="'+v+'">'+v+(on?'<span class="boe-select-option-check" aria-hidden="true">'+BOE_CK+'</span>':'')+'</div>';
+    }
+    return '<input type="hidden" id="'+id+'" data-k="'+key+'" value="'+cur+'">'+
+      '<div class="boe-select" data-boe-select style="width:100%">'+
+        '<button class="boe-select-trigger" type="button" aria-haspopup="listbox" aria-expanded="false">'+
+          '<span class="boe-select-value has-value">'+cur+'</span>'+
+          '<i class="boe-select-arrow" aria-hidden="true"><svg class="boe-control-icon boe-control-chevron-down" viewBox="0 0 16 16"><path d="M5.25 6.25 8 9l2.75-2.75" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></i>'+
+        '</button>'+
+        '<div class="boe-select-dropdown"><div class="boe-select-options" role="listbox">'+op+'</div></div>'+
+      '</div>';
+  }
+  function boeNum(id, value, min, max, step, ph){
+    var v=(value===''||value===null||typeof value==='undefined')?'':String(value);
+    var pha=ph?' placeholder="'+ph+'"':'';
+    var ico=function(h){ return '<svg class="boe-input-number-icon boe-control-icon" aria-hidden="true"><use href="#boe-icon-'+h+'"></use></svg>'; };
+    return '<div class="input-number-module-details" style="width:100%">'+
+      '<div class="boe-input-number boe-input-number--compact" data-min="'+min+'" data-max="'+max+'" data-step="'+step+'" style="width:100%">'+
+        '<button class="boe-input-number-button" data-boe-step="-1" type="button" aria-label="减少">'+ico('minus-small')+'</button>'+
+        '<input class="boe-input-number-input" data-input-number-input id="'+id+'" type="number" value="'+v+'" min="'+min+'" max="'+max+'" step="'+step+'"'+pha+' data-k="'+'num'+'">'+
+        '<button class="boe-input-number-button" data-boe-step="1" type="button" aria-label="增加">'+ico('plus-small')+'</button>'+
+      '</div></div>';
+  }
+  function boeDate(id, value){
+    var v=String(value||''), m=v.match(/^(\d{4})-(\d{2})-(\d{2})$/), y=m?Number(m[1]):2026, mo=m?Number(m[2])-1:10;
+    return '<input type="hidden" id="'+id+'" data-k="'+'date'+'" value="'+v+'">'+
+      '<div class="picker-module-details" data-picker-module="date-picker" style="width:100%">'+
+      '<div class="boe-date-picker'+(v?' has-value':'')+'" data-date-input="'+id+'" data-selected="'+v+'" data-year="'+y+'" data-month="'+mo+'" style="width:100%">'+
+        '<button class="boe-date-trigger" type="button" aria-haspopup="dialog" aria-expanded="false">'+
+          '<span class="boe-date-value'+(v?' has-value':'')+'">'+(v||'请选择日期')+'</span>'+
+          '<svg class="boe-control-icon boe-control-suffix boe-control-suffix--passive boe-control-calendar boe-date-calendar" aria-hidden="true"><use href="#boe-icon-calendar"></use></svg>'+
+        '</button>'+
+        '<div class="boe-date-panel" role="dialog" aria-label="选择日期"></div>'+
+      '</div></div>';
+  }
+  function boe$(id){ return document.getElementById(id); }
+  function boePad(n){ return n<10?'0'+n:''+n; }
+  function boeISO(y,m,d){ return y+'-'+boePad(m+1)+'-'+boePad(d); }
+  function boeCloseDates(except){
+    var nodes=document.querySelectorAll('.boe-date-picker.is-open');
+    for(var i=0;i<nodes.length;i++){
+      if(nodes[i]!==except){ nodes[i].classList.remove('is-open'); var tr=nodes[i].querySelector('.boe-date-trigger'); if(tr){ tr.setAttribute('aria-expanded','false'); } }
+    }
+  }
+  function boeRenderDate(root){
+    var y=Number(root.getAttribute('data-year')), mo=Number(root.getAttribute('data-month')), panel=root.querySelector('.boe-date-panel');
+    if(!panel||!isFinite(y)){ return; }
+    var arrow='<svg class="boe-control-icon" aria-hidden="true"><use href="#boe-icon-caret-down-small"></use></svg>';
+    var lead=new Date(y,mo,1).getDay(), total=new Date(y,mo+1,0).getDate(), sel=root.getAttribute('data-selected'), cells='';
+    var _t=new Date(), tdy=_t.getFullYear(), tmo=_t.getMonth(), tdd=_t.getDate();
+    for(var k=0;k<lead;k++){ cells+='<span aria-hidden="true"></span>'; }
+    for(var d=1;d<=total;d++){
+      var iso=boeISO(y,mo,d), on=iso===sel, today=iso===boeISO(tdy,tmo,tdd);
+      cells+='<button type="button" class="boe-date-cell'+(on?' is-selected':'')+(today?' is-today':'')+'" data-date-cell="'+iso+'" aria-label="'+iso+'"'+(on?' aria-pressed="true"':'')+'>'+d+'</button>';
+    }
+    panel.innerHTML='<div class="boe-date-panel-header"><button type="button" class="boe-date-nav boe-date-prev" data-date-nav="-1" aria-label="上个月">'+arrow+'</button><span class="boe-date-title">'+y+' 年 '+(mo+1)+' 月</span><button type="button" class="boe-date-nav boe-date-next" data-date-nav="1" aria-label="下个月">'+arrow+'</button></div>'+
+      '<div class="boe-date-week" aria-hidden="true"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>'+
+      '<div class="boe-date-grid">'+cells+'</div>'+
+      '<div class="boe-date-panel-footer"><button type="button" class="boe-date-link" data-date-today>今天</button><button type="button" class="boe-date-link" data-date-clear>清除</button></div>';
+  }
+  function boeSetDate(root, value){
+    var id=root.getAttribute('data-date-input'), hidden=boe$(id), val=String(value||''), m=val.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    root.setAttribute('data-selected',val);
+    if(m){ root.setAttribute('data-year',m[1]); root.setAttribute('data-month',Number(m[2])-1); }
+    root.classList.toggle('has-value',!!val);
+    var label=root.querySelector('.boe-date-value');
+    if(label){ label.textContent=val||'请选择日期'; label.classList.toggle('has-value',!!val); }
+    if(hidden){ hidden.value=val; hidden.dispatchEvent(new Event('input',{bubbles:true})); }
+    root.classList.remove('is-open');
+    var tr=root.querySelector('.boe-date-trigger'); if(tr){ tr.setAttribute('aria-expanded','false'); }
+  }
+  function boeStep(root, dir){
+    var input=root.querySelector('[data-input-number-input]'); if(!input){ return; }
+    var step=Number(root.getAttribute('data-step'))||1, min=root.getAttribute('data-min'), max=root.getAttribute('data-max');
+    var cur=Number(input.value), base=isFinite(cur)?cur:(min!==''?Number(min):0), next=base+dir*step;
+    if(min!==''&&min!==null&&next<Number(min)){ next=Number(min); }
+    if(max!==''&&max!==null&&next>Number(max)){ next=Number(max); }
+    input.value=next; input.dispatchEvent(new Event('input',{bubbles:true}));
+  }
+  document.addEventListener('click', function(e){
+    var trig=e.target.closest('.boe-date-trigger');
+    if(trig){
+      var root=trig.closest('.boe-date-picker'), open=!root.classList.contains('is-open');
+      boeCloseDates(root); if(open){ boeRenderDate(root); }
+      root.classList.toggle('is-open',open); trig.setAttribute('aria-expanded',String(open)); return;
+    }
+    var nav=e.target.closest('[data-date-nav]');
+    if(nav){
+      var r=nav.closest('.boe-date-picker'), mo=Number(r.getAttribute('data-month'))+Number(nav.getAttribute('data-date-nav')), y=Number(r.getAttribute('data-year'));
+      if(mo<0){ mo=11; y--; } if(mo>11){ mo=0; y++; }
+      r.setAttribute('data-month',mo); r.setAttribute('data-year',y); boeRenderDate(r); return;
+    }
+    var cell=e.target.closest('[data-date-cell]');
+    if(cell){ boeSetDate(cell.closest('.boe-date-picker'),cell.getAttribute('data-date-cell')); return; }
+    if(e.target.closest('[data-date-today]')){ var t=new Date(); boeSetDate(e.target.closest('.boe-date-picker'),boeISO(t.getFullYear(),t.getMonth(),t.getDate())); return; }
+    if(e.target.closest('[data-date-clear]')){ boeSetDate(e.target.closest('.boe-date-picker'),''); return; }
+    if(!e.target.closest('.boe-date-picker')){ boeCloseDates(); }
+
+    var st=e.target.closest('[data-boe-step]');
+    if(st){ boeStep(st.closest('.boe-input-number'), Number(st.getAttribute('data-boe-step'))); return; }
+
+    var sel=e.target.closest('.boe-select-trigger');
+    if(sel){
+      var box=sel.closest('.boe-select'), on=!box.classList.contains('is-open');
+      var opened=document.querySelectorAll('.boe-select.is-open');
+      for(var i=0;i<opened.length;i++){ if(opened[i]!==box){ opened[i].classList.remove('is-open'); opened[i].querySelector('.boe-select-trigger').setAttribute('aria-expanded','false'); } }
+      box.classList.toggle('is-open',on); sel.setAttribute('aria-expanded',String(on)); return;
+    }
+    var opt=e.target.closest('[data-boe-opt]');
+    if(opt){
+      var sid=opt.getAttribute('data-sel'), sv=opt.getAttribute('data-v');
+      var box2=opt.closest('.boe-select'), val=box2.querySelector('.boe-select-value');
+      if(val){ val.textContent=sv; }
+      box2.querySelectorAll('.boe-select-option').forEach(function(o){
+        var on=o===opt; o.classList.toggle('is-selected',on); o.setAttribute('aria-selected',String(on));
+        var ck=o.querySelector('.boe-select-option-check');
+        if(on&&!ck){ o.insertAdjacentHTML('beforeend','<span class="boe-select-option-check" aria-hidden="true">'+BOE_CK+'</span>'); }
+        if(!on&&ck){ ck.remove(); }
+      });
+      var hid=boe$(sid); if(hid){ hid.value=sv; hid.dispatchEvent(new Event('input',{bubbles:true})); }
+      box2.classList.remove('is-open');
+      box2.querySelector('.boe-select-trigger').setAttribute('aria-expanded','false');
+      return;
+    }
+    if(!e.target.closest('.boe-select')){
+      var os=document.querySelectorAll('.boe-select.is-open');
+      for(var j=0;j<os.length;j++){ os[j].classList.remove('is-open'); os[j].querySelector('.boe-select-trigger').setAttribute('aria-expanded','false'); }
+    }
+  });
+
+(function(){
+'use strict';
+var $=function(id){return document.getElementById(id);};
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function pad2(n){return n<10?'0'+n:''+n;}
+
+/* ---------------- 数据 ---------------- */
+var COLS=[
+  {k:'TIME_KEY',cn:'日期标识',t:'date'},
+  {k:'PRODUCT_ID',cn:'产品标识',t:'id'},
+  {k:'TARGET_LAG_1',cn:'前 1 日良率',t:'num'},
+  {k:'TARGET_LAG_2',cn:'前 2 日良率',t:'num'},
+  {k:'TARGET_LAG_14',cn:'前 14 日良率',t:'num'},
+  {k:'ROLLING_MEAN_7',cn:'7 日均值',t:'num'},
+  {k:'ROLLING_STD_7',cn:'7 日标准差',t:'num'},
+  {k:'DAY_OF_WEEK',cn:'星期',t:'cat'},
+  {k:'YIELD_RATE',cn:'良率',t:'num'},
+  {k:'OUTPUT_QTY',cn:'产出量',t:'num'},
+  {k:'BK_RATE',cn:'背伤率',t:'num'}
+];
+var SAME={OUTPUT_QTY:1,BK_RATE:1};
+var RECOMMEND=['TARGET_LAG_1','TARGET_LAG_2','ROLLING_MEAN_7'];
+
+var ST={target:'YIELD_RATE',feats:RECOMMEND.slice(),page:1,pageSize:10,mode:'feature'};
+
+var SP={mode:'dates',method:'holdout',trainPct:70,valPct:15,testPct:15,
+  d:{train:['2026-07-15','2026-10-05'],validation:['2026-10-06','2026-10-22'],test:['2026-10-23','2026-11-10']},
+  folds:3,window:7,gap:0};
+var SP_DEFAULT=JSON.stringify(SP);
+
+var REC=(function(){
+  var n=119,OFF=20,ser=[],i;
+  for(i=-OFF;i<n;i++){ ser.push(96.9+Math.sin(i/9)*0.55+Math.sin(i/2.1)*0.07); }
+  function sv(i){ return ser[i+OFF]; }
+  function f2(v){return v.toFixed(2);}
+  var out=[];
+  for(i=0;i<n;i++){
+    var d=new Date(2026,6,15+i);
+    var w=[]; for(var q=i-6;q<=i;q++){ w.push(sv(q)); }
+    var mean=w.reduce(function(a,b){return a+b;},0)/w.length;
+    var varc=w.reduce(function(a,b){return a+Math.pow(b-mean,2);},0)/w.length;
+    var row={
+      TIME_KEY:d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()),
+      PRODUCT_ID:'ALL_PRODUCTS',
+      TARGET_LAG_1:f2(sv(i-1)),
+      TARGET_LAG_2:f2(sv(i-2)),
+      TARGET_LAG_14:f2(sv(i-14)),
+      ROLLING_MEAN_7:f2(mean),
+      ROLLING_STD_7:f2(Math.sqrt(varc)),
+      DAY_OF_WEEK:String(d.getDay()),
+      YIELD_RATE:f2(sv(i)),
+      OUTPUT_QTY:String(Math.round(35200+Math.sin(i/5)*900+Math.sin(i/1.7)*160)),
+      BK_RATE:f2(0.28+Math.sin(i/6.5)*0.06+Math.sin(i/2.9)*0.02)
+    };
+    out.push(row);
+  }
+  return out;
+})();
+
+function colOf(k){for(var i=0;i<COLS.length;i++){if(COLS[i].k===k){return COLS[i];}}return null;}
+function has(arr,k){return arr.indexOf(k)>-1;}
+function canFeature(k){var c=colOf(k);return !!c&&(c.t==='num'||c.t==='cat')&&k!==ST.target&&!SAME[k];}
+function canTarget(k){var c=colOf(k);return !!c&&c.t==='num'&&!SAME[k];}
+
+/* ---------------- 步骤 1 渲染 ---------------- */
+function renderTable(){
+  var h='<thead><tr><th class="row-ix">序号</th>',i,c,isT,isF,isLock,cls,role,mark,act;
+  for(i=0;i<COLS.length;i++){
+    c=COLS[i]; isT=c.k===ST.target; isF=has(ST.feats,c.k);
+    isLock=!isT&&!canFeature(c.k);
+    cls=(isT?'role-target':isF?'role-feature':'')+(isLock?' is-lock':'');
+    role=isT?'目标列':isF?'特征列':isLock?(c.t==='date'?'日期列':c.t==='id'?'标识列':'同日结果'):'未选';
+    mark=isT?'<i class="rb radio on"></i>':isF?'<i class="rb on"></i>':isLock?'<i class="rb lock"></i>':'<i class="rb"></i>';
+    act=isLock
+      ? '<span class="th-lock">'+(SAME[c.k]?'不可作输入':'不可选')+'</span>'
+      : isT
+        ? '<span class="th-cur">当前目标</span>'
+        : '<button class="th-set" data-set="'+c.k+'" type="button">设为目标</button>';
+    h+='<th class="'+cls+'" data-col="'+i+'"'+(isLock?' aria-disabled="true"':' tabindex="0" role="'+(isT?'radio':'checkbox')+'" aria-checked="'+(isT||isF?'true':'false')+'"')+' aria-label="'+esc(c.k)+'">'+
+        '<span class="th-role">'+mark+role+'</span>'+
+        '<span class="th-name">'+esc(c.k)+'</span>'+
+        '<span class="th-cn">'+c.cn+'</span>'+act+
+      '</th>';
+  }
+  h+='</tr></thead><tbody>';
+  var start=(ST.page-1)*ST.pageSize;
+  var list=REC.slice(start,start+ST.pageSize);
+  for(var r=0;r<list.length;r++){
+    h+='<tr><td class="row-ix">'+(start+r+1)+'</td>';
+    for(var j=0;j<COLS.length;j++){
+      var k=COLS[j].k, isTd=k===ST.target, isFd=has(ST.feats,k);
+      var ck=isTd?'role-target':isFd?'role-feature':(!canFeature(k)&&k!==ST.target?'is-lock':'');
+      var v=list[r][k];
+      h+='<td class="'+ck+'">'+(v===''?'<span class="cell-empty">—</span>':esc(v))+'</td>';
+    }
+    h+='</tr>';
+  }
+  h+='</tbody>';
+  $('ptable').innerHTML=h;
+}
+
+function renderTargetSel(){
+  var list=[];
+  for(var i=0;i<COLS.length;i++){ if(canTarget(COLS[i].k)){ list.push(COLS[i].k); } }
+  $('targetSel').innerHTML=boeSel('spTarget',list,ST.target,'target');
+}
+
+function renderSum(){
+  var t=colOf(ST.target);
+  $('sumTarget').innerHTML='<span class="chip target" data-goto="'+esc(t.k)+'" title="定位到该列">'+esc(t.k)+'</span><span class="sum-cn">'+t.cn+'</span>';
+  $('featN').textContent=ST.feats.length;
+  if(!ST.feats.length){
+    $('sumFeat').innerHTML='<span class="sum-empty">尚未选择特征列</span>';
+  }else{
+    $('sumFeat').innerHTML=ST.feats.map(function(k){
+      return '<span class="chip" data-goto="'+esc(k)+'" title="定位到该列">'+esc(k)+'<button type="button" data-rm="'+k+'" aria-label="移除 '+esc(k)+'">×</button></span>';
+    }).join('');
+  }
+}
+
+function renderPager(){
+  var pages=Math.max(1,Math.ceil(REC.length/ST.pageSize));
+  if(ST.page>pages){ ST.page=pages; }
+  $('pnow').textContent=ST.page+' / '+pages;
+  $('prev').disabled=ST.page<=1;
+  $('next').disabled=ST.page>=pages;
+  $('recTotal').textContent=REC.length;
+  $('pageSize').value=String(ST.pageSize);
+}
+
+/* ---------------- 步骤 2 计算 ---------------- */
+function pd(s){var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s||''));return m?Date.UTC(+m[1],+m[2]-1,+m[3]):null;}
+function inRange(day,a,b){var t=pd(day),x=pd(a),y=pd(b);return t!==null&&x!==null&&y!==null&&t>=x&&t<=y;}
+function countRange(a,b,skip){var n=0;for(var i=0;i<REC.length;i++){if(inRange(REC[i].TIME_KEY,a,b)&&!(skip&&skip(REC[i].TIME_KEY))){n++;}}return n;}
+
+function checkDates(){
+  var t=SP.d.train,v=SP.d.validation,s=SP.d.test,k;
+  var all=[['训练集',t],['验证集',v],['测试集',s]];
+  for(k=0;k<all.length;k++){
+    var a=pd(all[k][1][0]),b=pd(all[k][1][1]);
+    if(a===null||b===null){ return {ok:false,msg:'请补全'+all[k][0]+'的起止日期'}; }
+    if(a>b){ return {ok:false,msg:all[k][0]+'的开始日期晚于结束日期'}; }
+  }
+  if(pd(t[1])>=pd(v[0])||pd(v[1])>=pd(s[0])){ return {ok:false,msg:'请按训练 → 验证 → 测试排列，区间不能重叠'}; }
+  if(countRange(t[0],t[1])<14){ return {ok:false,msg:'训练集至少 14 个有效日样本'}; }
+  if(countRange(v[0],v[1])<1||countRange(s[0],s[1])<1){ return {ok:false,msg:'验证集和测试集各至少 1 个日样本'}; }
+  return {ok:true};
+}
+function checkRatio(){
+  var sum=Number(SP.trainPct)+Number(SP.valPct)+Number(SP.testPct);
+  if(!isFinite(sum)||sum!==100){ return {ok:false,msg:'训练 / 验证 / 测试比例合计需为 100%，当前 '+sum+'%'}; }
+  if(SP.trainPct<1||SP.valPct<1||SP.testPct<1){ return {ok:false,msg:'每段比例至少 1%'}; }
+  return {ok:true};
+}
+function splitStats(){
+  var s={};
+  if(SP.mode==='dates'){
+    s.train=countRange(SP.d.train[0],SP.d.train[1]);
+    s.val=countRange(SP.d.validation[0],SP.d.validation[1]);
+    s.test=countRange(SP.d.test[0],SP.d.test[1]);
+    s.check=checkDates();
+  }else{
+    var n=REC.length,a=Math.round(n*SP.trainPct/100),b=Math.round(n*SP.valPct/100);
+    s.train=a; s.val=b; s.test=Math.max(0,n-a-b);
+    s.check=checkRatio();
+  }
+  s.unused=Math.max(0,REC.length-s.train-s.val-s.test);
+  return s;
+}
+
+/* ---------------- 步骤 2 渲染 ---------------- */
+function renderSplitSelects(){
+  $('selMode').innerHTML=boeSel('spMode',['指定日期范围','按时间比例'],SP.mode==='dates'?'指定日期范围':'按时间比例','splitmode');
+  $('selMethod').innerHTML=boeSel('spMethod',['独立验证集','时间序列交叉验证'],SP.method==='holdout'?'独立验证集':'时间序列交叉验证','splitmethod');
+}
+function syncSelects(){
+  var pairs=[['spMode',SP.mode==='dates'?'指定日期范围':'按时间比例'],['spMethod',SP.method==='holdout'?'独立验证集':'时间序列交叉验证']];
+  for(var i=0;i<pairs.length;i++){
+    var hid=$(pairs[i][0]);
+    if(!hid||hid.value===pairs[i][1]){ continue; }
+    hid.value=pairs[i][1];
+    var box=hid.nextElementSibling, lab=box?box.querySelector('.boe-select-value'):null;
+    if(lab){ lab.textContent=pairs[i][1]; }
+  }
+}
+function dateGrp(name,key){
+  var d=SP.d[key];
+  return '<div class="f"><label>'+name+'</label><div class="pair">'+
+    boeDate('sp_'+key+'_s',d[0])+'<span class="arrow">→</span>'+boeDate('sp_'+key+'_e',d[1])+
+  '</div></div>';
+}
+function renderCond(){
+  var h='';
+  if(SP.mode==='dates'){
+    h+='<div class="grid3">'+dateGrp('训练集','train')+dateGrp('验证集','validation')+dateGrp('测试集','test')+'</div>';
+  }else{
+    h+='<div class="grid3">'+
+        '<div class="f"><label>训练集 %</label>'+boeNum('spTrainPct',SP.trainPct,1,98,1)+'</div>'+
+        '<div class="f"><label>验证集 %</label>'+boeNum('spValPct',SP.valPct,1,98,1)+'</div>'+
+        '<div class="f"><label>测试集 %</label>'+boeNum('spTestPct',SP.testPct,1,98,1)+'</div>'+
+      '</div>'+
+      '<p class="hintline">按日期从早到晚分配，合计 100%。</p>';
+  }
+  if(SP.method==='rolling'){
+    h+='<div class="grid3" style="margin-top:14px">'+
+        '<div class="f"><label>折数</label>'+boeNum('spFolds',SP.folds,2,5,1)+'</div>'+
+        '<div class="f"><label>每折验证窗口（天）</label>'+boeNum('spWindow',SP.window,1,60,1)+'</div>'+
+        '<div class="f"><label>训练与验证间隔（天）</label>'+boeNum('spGap',SP.gap,0,30,1)+'</div>'+
+      '</div>'+
+      '<p class="hintline">只在训练集内滚动，窗口建议覆盖预测跨度。</p>';
+  }
+  $('splitCond').innerHTML=h;
+}
+
+function renderPreview(){
+  syncSelects();
+  var s=splitStats();
+  var h='<div class="pbar">'+
+    '<span class="tr" style="flex:'+Math.max(s.train,0.001)+'">训练 '+s.train+' 天</span>'+
+    '<span class="va" style="flex:'+Math.max(s.val,0.001)+'">验证 '+s.val+' 天</span>'+
+    '<span class="te" style="flex:'+Math.max(s.test,0.001)+'">测试 '+s.test+' 天</span>'+
+  '</div>';
+  if(SP.mode==='dates'){
+    h+='<div class="pranges">'+
+      '<span><b>训练集</b>'+SP.d.train[0]+' ~ '+SP.d.train[1]+'</span>'+
+      '<span><b>验证集</b>'+SP.d.validation[0]+' ~ '+SP.d.validation[1]+'</span>'+
+      '<span><b>测试集</b>'+SP.d.test[0]+' ~ '+SP.d.test[1]+'</span>'+
+    '</div>';
+  }else{
+    h+='<div class="pranges">'+
+      '<span><b>合计</b>'+SP.trainPct+'% + '+SP.valPct+'% + '+SP.testPct+'%</span>'+
+      '<span><b>有效日样本</b>'+REC.length+' 天</span>'+
+    '</div>';
+  }
+  h+='<div class="status '+(s.check.ok?'ok':'err')+'"><span class="dot"></span><span>'+
+    (s.check.ok
+      ? '划分可用：训练 '+s.train+' 天、验证 '+s.val+' 天、测试 '+s.test+' 天，未使用 '+s.unused+' 天'
+      : s.check.msg)+
+  '</span></div>';
+  $('splitPreview').innerHTML=h;
+  $('footSum').textContent='目标 '+ST.target+' · 特征 '+ST.feats.length+' 列 · 训练 '+s.train+' / 验证 '+s.val+' / 测试 '+s.test+' 天';
+}
+
+function renderAll(){
+  renderTable(); renderTargetSel(); renderSum(); renderPager();
+}
+
+/* ---------------- 交互 ---------------- */
+function toast(msg){
+  var t=$('toast'); t.textContent=msg; t.classList.add('on');
+  clearTimeout(toast._t); toast._t=setTimeout(function(){ t.classList.remove('on'); },1800);
+}
+
+function scrollToCol(k){
+  for(var i=0;i<COLS.length;i++){
+    if(COLS[i].k===k){
+      var th=document.querySelector('#ptable th[data-col="'+i+'"]');
+      if(th){ th.scrollIntoView({block:'nearest',inline:'center',behavior:'smooth'}); }
+      return;
+    }
+  }
+}
+
+function setTarget(k){
+  if(!canTarget(k)){ toast('目标列需为原始数值字段'); return; }
+  if(k===ST.target){ return; }
+  ST.target=k;
+  ST.feats=ST.feats.filter(function(x){ return x!==k; });
+  renderAll(); renderPreview();
+  toast('目标列已切换为 '+k);
+}
+
+var drag=null;
+document.addEventListener('mousedown',function(e){
+  var th=e.target.closest('#ptable th[data-col]');
+  if(!th||e.target.closest('button')){ return; }
+  var i=Number(th.getAttribute('data-col')), k=COLS[i].k;
+  if(!canFeature(k)&&k!==ST.target){
+    toast(SAME[k]?'同日结果会造成信息泄漏，不可选':(colOf(k).t==='date'?'日期列用于定位记录，不可选':'标识列用于定位记录，不可选'));
+    return;
+  }
+  if(ST.mode==='target'){ setTarget(k); return; }
+  e.preventDefault();
+  drag={start:i,on:!has(ST.feats,k)};
+  $('ptable').classList.add('dragging');
+  applyDrag(i);
+});
+
+function applyDrag(i){
+  if(!drag){ return; }
+  var lo=Math.min(drag.start,i), hi=Math.max(drag.start,i), next=ST.feats.slice(0), x;
+  for(x=lo;x<=hi;x++){
+    var k=COLS[x].k;
+    if(next.indexOf(k)>-1){ next.splice(next.indexOf(k),1); }
+    if(drag.on&&canFeature(k)){ next.push(k); }
+  }
+  ST.feats=next;
+  renderTable(); renderSum(); renderPreview();
+}
+
+document.addEventListener('mouseover',function(e){
+  if(!drag){ return; }
+  var th=e.target.closest('#ptable th[data-col]');
+  if(!th){ return; }
+  applyDrag(Number(th.getAttribute('data-col')));
+});
+
+document.addEventListener('mouseup',function(){
+  if(!drag){ return; }
+  drag=null;
+  var t=$('ptable'); if(t){ t.classList.remove('dragging'); }
+});
+
+document.addEventListener('click',function(e){
+  var set=e.target.closest('[data-set]');
+  if(set){ setTarget(set.getAttribute('data-set')); return; }
+  var rm=e.target.closest('[data-rm]');
+  if(rm){
+    var k=rm.getAttribute('data-rm');
+    ST.feats=ST.feats.filter(function(x){ return x!==k; });
+    renderTable(); renderSum(); renderPreview(); return;
+  }
+  var go=e.target.closest('[data-goto]');
+  if(go){ scrollToCol(go.getAttribute('data-goto')); return; }
+  var mode=e.target.closest('.modes button');
+  if(mode){
+    ST.mode=mode.getAttribute('data-mode');
+    var bs=document.querySelectorAll('.modes button');
+    for(var i=0;i<bs.length;i++){ bs[i].classList.toggle('is-on',bs[i]===mode); }
+    return;
+  }
+});
+
+$('clearFeat').addEventListener('click',function(){
+  ST.feats=[]; renderTable(); renderSum(); renderPreview();
+});
+$('recFeat').addEventListener('click',function(){
+  ST.feats=RECOMMEND.filter(function(k){ return k!==ST.target; });
+  renderTable(); renderSum(); renderPreview();
+});
+$('resetSplit').addEventListener('click',function(){
+  SP=JSON.parse(SP_DEFAULT);
+  renderSplitSelects(); renderCond(); renderPreview();
+});
+$('prev').addEventListener('click',function(){
+  if(ST.page>1){ ST.page--; renderTable(); renderPager(); }
+});
+$('next').addEventListener('click',function(){
+  var pages=Math.max(1,Math.ceil(REC.length/ST.pageSize));
+  if(ST.page<pages){ ST.page++; renderTable(); renderPager(); }
+});
+$('pageSize').addEventListener('change',function(){
+  ST.pageSize=Number(this.value); ST.page=1; renderTable(); renderPager();
+});
+
+/* BOE 控件回写 */
+document.addEventListener('input',function(e){
+  var t=e.target, id=t.id||'';
+  if(id==='spTarget'){ if(t.value!==ST.target){ setTarget(t.value); } return; }
+  if(id==='spMode'){ SP.mode=(t.value==='按时间比例')?'ratio':'dates'; renderCond(); renderPreview(); return; }
+  if(id==='spMethod'){ SP.method=(t.value==='独立验证集')?'holdout':'rolling'; renderCond(); renderPreview(); return; }
+  var md=/^sp_(train|validation|test)_([se])$/.exec(id);
+  if(md){ SP.d[md[1]][md[2]==='s'?0:1]=t.value; renderPreview(); return; }
+  if(id==='spTrainPct'){ SP.trainPct=Number(t.value)||0; renderPreview(); return; }
+  if(id==='spValPct'){ SP.valPct=Number(t.value)||0; renderPreview(); return; }
+  if(id==='spTestPct'){ SP.testPct=Number(t.value)||0; renderPreview(); return; }
+  if(id==='spFolds'){ SP.folds=Number(t.value)||2; return; }
+  if(id==='spWindow'){ SP.window=Number(t.value)||7; return; }
+  if(id==='spGap'){ SP.gap=Number(t.value)||0; return; }
+});
+
+/* 初始化 */
+renderAll();
+renderSplitSelects();
+renderCond();
+renderPreview();
+})();
+</script>
+</body>
+</html>

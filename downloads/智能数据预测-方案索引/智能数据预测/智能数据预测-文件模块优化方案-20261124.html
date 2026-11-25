@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>文件模块 · UI 与交互优化方案</title>
+<style>
+  :root{
+    --b1:#EAF4FF; --b2:#D6EAFF; --b6:#0081FF; --b7:#0072E3;
+    --n1:#F7F9FC; --n2:#EFF2F6; --n3:#E3E8EF; --n4:#C9D2DD; --n5:#9AA6B4;
+    --n6:#6E7B8B; --n7:#4E5A68; --n8:#303133;
+    --g1:#E9F7EE; --g6:#1B7F45;
+    --page:#F5F7FA; --card:#FFFFFF;
+    --r:12px;
+    --shadow:0 1px 2px rgba(48,49,51,.04);
+    --shadow-h:0 10px 26px rgba(0,129,255,.10);
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%; scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--page); color:var(--n8);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    font-size:14px; line-height:1.6; -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit; text-decoration:none}
+  .wrap{width:100%; max-width:1080px; margin:0 auto; padding:0 24px}
+
+  /* ---------- 头部 ---------- */
+  .topbar{background:#FFF; background-image:linear-gradient(180deg,#F4F9FF 0%,#FFFFFF 78%);
+    border-bottom:1px solid var(--n3)}
+  .topbar .wrap{padding-top:26px; padding-bottom:24px}
+  .crumb{display:flex; align-items:center; gap:8px; color:var(--n5); font-size:12px}
+  .crumb i{font-style:normal; color:var(--n4)}
+  .topbar h1{margin:10px 0 0; font-size:24px; line-height:34px; font-weight:600; letter-spacing:-.01em}
+  .topbar .sub{margin:8px 0 0; color:var(--n6); font-size:13px; line-height:22px; max-width:760px}
+
+  .issues{display:grid; grid-template-columns:repeat(auto-fit,minmax(232px,1fr)); gap:10px; margin-top:20px}
+  .issue{padding:11px 13px; border:1px solid var(--n3); border-radius:10px; background:#FFF}
+  .issue b{display:block; font-size:12.5px; font-weight:600; color:var(--n7); line-height:18px}
+  .issue span{display:block; margin-top:3px; font-size:12px; color:var(--n6); line-height:18px}
+
+  /* ---------- 方案切换 ---------- */
+  main{padding:26px 0 60px}
+  .switcher{
+    position:sticky; top:0; z-index:30; display:flex; align-items:center; gap:6px;
+    padding:12px 0 12px; background:linear-gradient(180deg,var(--page) 78%,rgba(245,247,250,0));
+  }
+  .switcher .sl{flex:0 0 auto; margin-right:6px; color:var(--n6); font-size:12px}
+  .swbtn{
+    display:inline-flex; align-items:center; gap:8px; height:36px; padding:0 14px;
+    border:1px solid var(--n3); border-radius:8px; background:#FFF; color:var(--n7);
+    font-size:13px; font-weight:500; cursor:pointer; font-family:inherit;
+    transition:border-color .15s,color .15s,background .15s,box-shadow .15s;
+  }
+  .swbtn:hover{border-color:var(--n4); color:var(--n8)}
+  .swbtn .k{
+    display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px;
+    border-radius:5px; background:var(--n2); color:var(--n6); font-size:10.5px; font-weight:600;
+  }
+  .swbtn.on{border-color:var(--b6); background:var(--b1); color:var(--b7); box-shadow:0 0 0 3px rgba(0,129,255,.08)}
+  .swbtn.on .k{background:var(--b6); color:#FFF}
+  .swtag{margin-left:auto; color:var(--n5); font-size:11.5px}
+
+  .pane{display:none}
+  .pane.on{display:block; animation:paneIn .26s ease both}
+  @keyframes paneIn{from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none}}
+
+  .phead{margin:8px 0 18px}
+  .phead h2{margin:0; font-size:16px; line-height:26px; font-weight:600}
+  .phead h2 em{font-style:normal; color:var(--b6); font-size:12px; font-weight:600;
+    margin-right:8px; letter-spacing:.04em}
+  .phead p{margin:5px 0 0; color:var(--n6); font-size:12.5px; line-height:20px}
+  .phead .spec{display:flex; flex-wrap:wrap; gap:6px; margin-top:10px}
+  .phead .spec span{padding:2px 8px; border-radius:5px; background:var(--n2); color:var(--n6);
+    font-size:11px; line-height:17px}
+
+  /* ---------- 通用：状态标签 ---------- */
+  .pill{display:inline-flex; align-items:center; height:19px; padding:0 7px; border-radius:5px;
+    font-size:11px; font-weight:500; line-height:1; white-space:nowrap}
+  .pill.blue{background:var(--b1); color:var(--b7)}
+  .pill.green{background:var(--g1); color:var(--g6)}
+  .pill.gray{background:var(--n2); color:var(--n6)}
+  .pill.solid{background:var(--b6); color:#FFF}
+
+  .hero{display:block; position:relative; overflow:hidden; background:var(--n1)}
+  .hero img{width:100%; height:100%; object-fit:cover; object-position:top left; display:block;
+    transition:transform .42s cubic-bezier(.2,.7,.3,1)}
+  .hero .cap{position:absolute; left:9px; top:9px; display:inline-flex; align-items:center; gap:5px;
+    height:21px; padding:0 8px; border-radius:5px; background:rgba(0,129,255,.94);
+    color:#FFF; font-size:10.5px; font-weight:600; letter-spacing:.02em;
+    box-shadow:0 2px 8px rgba(0,60,130,.22); backdrop-filter:saturate(140%) blur(2px)}
+  .hero .cap.dark{background:rgba(48,49,51,.82)}
+
+  /* ============================================================
+     方案 A：画廊（大图 + 旧版胶片条）
+     ============================================================ */
+  .a-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:14px}
+  .a-card{display:flex; flex-direction:column; height:100%;
+    border:1px solid var(--n3); border-radius:var(--r); background:var(--card);
+    box-shadow:var(--shadow); overflow:hidden; transition:border-color .18s, box-shadow .18s, transform .18s}
+  .a-card:hover{border-color:var(--b6); box-shadow:var(--shadow-h); transform:translateY(-1px)}
+  .a-card .hero{flex:0 0 auto; aspect-ratio:16/10; border-bottom:1px solid var(--n2)}
+  .a-card:hover .hero img{transform:scale(1.03)}
+  .a-meta{flex:1 1 auto; display:flex; flex-direction:column; padding:12px 14px 0}
+  .a-line1{display:flex; align-items:center; gap:8px}
+  .a-line1 b{font-size:14px; line-height:21px; font-weight:600; color:var(--n8)}
+  .a-line1 .pill{margin-left:auto}
+  .a-line2{margin-top:4px; color:var(--n5); font-size:11.5px; line-height:18px;
+    font-variant-numeric:tabular-nums}
+  .a-note{flex:1 1 auto; margin:7px 0 0; min-height:57px; color:var(--n6); font-size:12px; line-height:19px;
+    display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden}
+
+  /* 底部栏：高度固定，多版本放旧版胶片 / 单版本放文件信息，卡片因此等高 */
+  .a-foot{flex:0 0 auto; display:flex; align-items:center; gap:7px;
+    min-height:62px; margin-top:10px; padding:0 14px; border-top:1px dashed var(--n3)}
+  .a-foot .fl{flex:0 0 auto; margin-right:2px; color:var(--n5); font-size:11px}
+  .a-foot .fx{flex:0 0 auto; padding:0 6px; border-radius:4px; background:var(--b1); color:var(--b7);
+    font-size:10px; font-weight:600; line-height:18px; letter-spacing:.03em}
+  .a-foot .fd,.a-foot .fz{flex:0 0 auto; color:var(--n5); font-size:11px;
+    font-variant-numeric:tabular-nums}
+  .a-foot .fdot{flex:0 0 auto; color:var(--n4); font-size:11px}
+  .a-foot .fopen{margin-left:auto; flex:0 0 auto; display:inline-flex; align-items:center; gap:4px;
+    color:var(--b7); font-size:11.5px; font-weight:500; transition:color .14s}
+  .a-foot .fopen:hover{color:var(--b6)}
+  .a-foot .fopen svg{width:10px; height:10px}
+  .a-thumb{position:relative; flex:0 0 auto; width:58px; border-radius:5px; overflow:hidden;
+    background:var(--n1); box-shadow:0 0 0 1px var(--n3); transition:box-shadow .15s, transform .15s}
+  .a-thumb img{width:100%; height:36px; object-fit:cover; object-position:top left; display:block;
+    filter:grayscale(.55) opacity(.82); transition:filter .18s}
+  .a-thumb:hover{transform:translateY(-1px); box-shadow:0 0 0 1.5px var(--b6)}
+  .a-thumb:hover img{filter:none}
+  .a-thumb .tv{position:absolute; left:0; bottom:0; padding:0 4px; border-radius:0 4px 0 4px;
+    background:rgba(48,49,51,.72); color:#FFF; font-size:9.5px; line-height:14px; font-weight:600;
+    letter-spacing:.02em}
+  .a-thumb.more{display:flex; align-items:center; justify-content:center; height:36px;
+    box-shadow:none; border:1.5px dashed var(--n4); background:transparent; color:var(--n5);
+    font-size:11px; font-weight:500; cursor:default}
+  .a-thumb.more:hover{transform:none; box-shadow:none; border-color:var(--n4)}
+
+  /* ============================================================
+     方案 B：行式（主图 + 版本记录表）
+     ============================================================ */
+  .b-list{display:flex; flex-direction:column; gap:12px}
+  .b-card{display:flex; gap:0; border:1px solid var(--n3); border-radius:var(--r);
+    background:var(--card); box-shadow:var(--shadow); overflow:hidden;
+    transition:border-color .18s, box-shadow .18s}
+  .b-card:hover{border-color:var(--b6); box-shadow:var(--shadow-h)}
+  .b-card .hero{flex:0 0 336px; aspect-ratio:16/10; align-self:flex-start;
+    border-right:1px solid var(--n2)}
+  .b-card:hover .hero img{transform:scale(1.03)}
+  .b-info{flex:1 1 auto; min-width:0; padding:14px 16px 12px; display:flex;
+    flex-direction:column; justify-content:center}
+  .b-head{display:flex; align-items:center; gap:9px}
+  .b-head h3{margin:0; font-size:14.5px; line-height:22px; font-weight:600; color:var(--n8);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .b-note{margin:6px 0 0; color:var(--n6); font-size:12.5px; line-height:20px;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
+  .b-meta{display:flex; align-items:center; gap:7px; margin-top:10px;
+    color:var(--n5); font-size:11.5px; font-variant-numeric:tabular-nums}
+  .b-meta span{color:var(--n7); font-weight:600}
+  .b-meta i{font-style:normal; color:var(--n4)}
+  .b-open{display:inline-flex; align-items:center; gap:5px; margin-left:auto; flex:0 0 auto;
+    height:26px; padding:0 10px; border-radius:6px; background:#FFF; border:1px solid var(--b6);
+    color:var(--b7); font-size:11.5px; font-weight:500; transition:background .15s}
+  .b-open:hover{background:var(--b1)}
+  .b-open svg{width:11px; height:11px}
+
+  .b-vers{margin:12px 0 0; padding:9px 0 0; border-top:1px solid var(--n2);
+    display:flex; flex-direction:column}
+  .b-vers .vt{display:flex; align-items:center; gap:6px; margin-bottom:4px;
+    color:var(--n5); font-size:10.5px; letter-spacing:.04em; text-transform:uppercase}
+  .b-vers .vt i{font-style:normal; flex:1 1 auto; height:1px; background:var(--n2)}
+  .vrow{display:flex; align-items:center; gap:10px; height:29px; padding:0 6px; border-radius:6px;
+    color:inherit; transition:background .14s}
+  .vrow:hover{background:var(--n1)}
+  .vrow .vv{flex:0 0 26px; color:var(--n5); font-size:11px; font-weight:600;
+    font-variant-numeric:tabular-nums}
+  .vrow .vn{flex:1 1 auto; min-width:0; color:var(--n7); font-size:12.5px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .vrow .vs{flex:0 0 auto}
+  .vrow .vd{flex:0 0 44px; text-align:right; color:var(--n5); font-size:11px;
+    font-variant-numeric:tabular-nums}
+  .vrow .vz{flex:0 0 58px; text-align:right; color:var(--n5); font-size:11px;
+    font-variant-numeric:tabular-nums}
+  .vrow.cur{background:var(--b1)}
+  .vrow.cur:hover{background:var(--b2)}
+  .vrow.cur .vv{color:var(--b7)}
+  .vrow.cur .vn{color:var(--n8); font-weight:600}
+
+  /* ============================================================
+     方案 C：层叠（最新在前，旧版压成纸片）
+     ============================================================ */
+  .c-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:14px;
+    align-items:start}
+  .c-stack{position:relative}
+  .c-stack.has-back{padding-top:18px}
+  .c-back{position:absolute; height:26px; border-radius:var(--r);
+    border:1px solid var(--n4); background:#FFF;
+    box-shadow:0 1px 3px rgba(48,49,51,.06);
+    transition:transform .24s cubic-bezier(.2,.7,.3,1)}
+  .c-back.b1{top:8px; left:11px; right:11px; z-index:1}
+  .c-back.b2{top:1px; left:22px; right:22px; z-index:0; background:#FAFBFD}
+  .c-card{position:relative; z-index:2; border:1px solid var(--n3); border-radius:var(--r);
+    background:var(--card); box-shadow:var(--shadow); overflow:hidden;
+    transition:border-color .18s, box-shadow .18s}
+  .c-card:hover{border-color:var(--b6); box-shadow:var(--shadow-h)}
+  .c-card .hero{aspect-ratio:16/10; border-bottom:1px solid var(--n2)}
+  .c-card:hover .hero img{transform:scale(1.03)}
+  .c-bar{display:flex; align-items:center; gap:8px; padding:11px 14px}
+  .c-bar b{font-size:13.5px; line-height:20px; font-weight:600; color:var(--n8);
+    min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .c-bar .pill{flex:0 0 auto}
+  .c-bar .cm{margin-left:auto; flex:0 0 auto; color:var(--n5); font-size:11.5px;
+    font-variant-numeric:tabular-nums}
+  .c-more{display:flex; align-items:center; justify-content:center; gap:6px; width:100%;
+    height:32px; margin-top:8px; border:1px dashed var(--n3); border-radius:8px;
+    background:transparent; color:var(--n6); font-size:11.5px; font-family:inherit;
+    cursor:pointer; transition:border-color .15s, color .15s, background .15s}
+  .c-more:hover{border-color:var(--b6); color:var(--b7); background:var(--b1)}
+  .c-more svg{width:11px; height:11px; transition:transform .2s}
+  .c-stack.open .c-more svg{transform:rotate(180deg)}
+  .c-stack:hover .c-back.b1{transform:translateY(-3px)}
+  .c-stack:hover .c-back.b2{transform:translateY(-6px)}
+  .c-old{display:grid; grid-template-rows:0fr; transition:grid-template-rows .3s cubic-bezier(.2,.7,.3,1)}
+  .c-stack.open .c-old{grid-template-rows:1fr}
+  .c-old>.in{overflow:hidden; min-height:0}
+  .c-old ul{list-style:none; margin:8px 0 0; padding:0; display:flex; flex-direction:column; gap:1px}
+  .c-old li a{display:flex; align-items:center; gap:9px; height:28px; padding:0 8px; border-radius:6px;
+    color:var(--n6); font-size:11.5px; transition:background .14s}
+  .c-old li a:hover{background:var(--n1); color:var(--n8)}
+  .c-old li .vv{flex:0 0 24px; color:var(--n5); font-size:10.5px; font-weight:600;
+    font-variant-numeric:tabular-nums}
+  .c-old li .vn{flex:1 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .c-old li .vd{flex:0 0 auto; color:var(--n5); font-size:10.5px}
+
+  /* ============================================================
+     方案 D：层叠 2（点击 → 旧版沿弧线向上扇形展开 + 蒙层）
+     ============================================================ */
+  .d-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:14px;
+    align-items:start}
+  .d-stack{position:relative; min-width:0; padding-top:20px}
+  .d-back{position:absolute; height:28px; border-radius:var(--r); border:1px solid var(--n4);
+    background:#FFF; box-shadow:0 1px 3px rgba(48,49,51,.06);
+    transition:transform .26s cubic-bezier(.2,.7,.3,1), opacity .22s}
+  .d-back.b1{top:9px; left:12px; right:12px; z-index:1}
+  .d-back.b2{top:2px; left:24px; right:24px; z-index:0; background:#FAFBFD}
+  .d-stack:hover .d-back.b1{transform:translateY(-3px)}
+  .d-stack:hover .d-back.b2{transform:translateY(-6px)}
+  .d-stack.is-open .d-back{opacity:0}
+
+  .d-card{position:relative; z-index:2; border:1px solid var(--n3); border-radius:var(--r);
+    background:var(--card); box-shadow:var(--shadow); overflow:hidden;
+    transition:border-color .18s, box-shadow .18s, opacity .18s}
+  .d-card:hover{border-color:var(--b6); box-shadow:var(--shadow-h)}
+  .d-stack.is-open .d-card{opacity:0; pointer-events:none}
+  .d-stack.is-multi{cursor:pointer}
+  .d-stack.is-open{cursor:default}
+
+  .d-top{display:block}
+  .d-card .hero{aspect-ratio:16/10; border-bottom:1px solid var(--n2)}
+  .d-card:hover .hero img{transform:scale(1.02)}
+
+  .d-bar{display:flex; align-items:center; gap:8px; width:100%; padding:11px 14px;
+    background:none; border:0; font:inherit; color:inherit; text-align:left;
+    text-decoration:none; cursor:pointer; transition:background .15s}
+  .d-bar:hover{background:var(--n1)}
+  .d-bar b{font-size:13.5px; line-height:20px; font-weight:600; color:var(--n8);
+    min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .d-bar .pill{flex:0 0 auto}
+  .d-bar .dm{margin-left:auto; flex:0 0 auto; color:var(--n5); font-size:11.5px;
+    font-variant-numeric:tabular-nums}
+  .d-bar .dchev{flex:0 0 auto; width:18px; height:18px; border-radius:4px;
+    display:inline-flex; align-items:center; justify-content:center; color:var(--n5);
+    transition:transform .24s cubic-bezier(.2,.7,.3,1), color .15s, background .15s}
+  .d-bar:hover .dchev{color:var(--b7); background:var(--b1)}
+  .d-bar .dopen{flex:0 0 auto; display:inline-flex; align-items:center; color:var(--b7)}
+
+  /* ---------- 浮层：蒙层 + 卡片副本 + 扇形层 ---------- */
+  .dfan{position:fixed; inset:0; z-index:120; display:none}
+  .dfan.in{display:block}
+  html.dfan-lock{overflow:hidden}
+  html.dfan-lock body{padding-right:var(--dfan-sb,0px)}
+
+  .dfan-veil{position:absolute; inset:0; background:rgba(40,44,52,.38); opacity:0;
+    -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px);
+    transition:opacity .26s ease}
+  .dfan.on .dfan-veil{opacity:1}
+
+  /* 卡片副本：从原位平移 + 放大到视口下方居中，只动 transform，不触发布局 */
+  .dfan-folder{position:absolute; z-index:60; transform-origin:top center;
+    transition:transform .40s cubic-bezier(.2,.7,.3,1)}
+  .dfan-folder .d-card{box-shadow:0 26px 60px rgba(48,49,51,.28)}
+  .dfan-folder .d-bar{cursor:default}
+  .dfan-folder .d-bar:hover{background:none}
+  .dfan-folder .dchev{transform:rotate(180deg)}
+
+  /* 扇形层：以纸片顶端中点为圆心，按弧线切线角度倾斜 */
+  .dfan-fan{position:absolute; left:0; top:0; width:0; height:0; pointer-events:none}
+  .dfan-item{position:absolute; left:0; top:0; width:var(--w); display:block;
+    text-decoration:none; pointer-events:auto; opacity:0;
+    transform:translate(-50%,-50%) translate(0,-4px) rotate(0deg) scale(.9);
+    transition:transform .48s cubic-bezier(.2,.7,.3,1), opacity .26s ease}
+  .dfan.on .dfan-item{opacity:1; transition-delay:var(--d,0s);
+    transform:translate(-50%,-50%) translate(var(--x),var(--y)) rotate(var(--rot)) scale(1)}
+  .dfan-item:hover,.dfan-item:focus-visible{z-index:900 !important; outline:none}
+  .dfan-in{position:relative; display:block; padding:6px 6px 7px; border:1px solid var(--n3); border-radius:10px;
+    background:#FFF; box-shadow:0 8px 22px rgba(48,49,51,.18);
+    transition:transform .2s cubic-bezier(.2,.7,.3,1), box-shadow .2s, border-color .2s}
+  .dfan-item:hover .dfan-in,.dfan-item:focus-visible .dfan-in{transform:translateY(-5px);
+    border-color:var(--b6); box-shadow:0 18px 34px rgba(48,49,51,.22)}
+  .dfan-shot{position:relative; display:block; aspect-ratio:16/10; border-radius:5px;
+    overflow:hidden; background:var(--n1); border:1px solid var(--n2)}
+  .dfan-shot img{width:100%; height:100%; object-fit:cover; object-position:top left; display:block}
+  .dfan-v{position:absolute; left:5px; bottom:5px; padding:0 5px; border-radius:4px;
+    background:rgba(48,49,51,.84); color:#FFF; font-size:9.5px; line-height:15px; font-weight:600;
+    font-variant-numeric:tabular-nums}
+  .dfan-meta{display:flex; align-items:center; gap:6px; padding:6px 1px 0}
+  .dfan-t{flex:1 1 auto; min-width:0; color:var(--n7); font-size:11px; line-height:15px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .dfan-d{flex:0 0 auto; color:var(--n5); font-size:10px; font-variant-numeric:tabular-nums}
+
+  /* 更多版本：扇面封顶后，末位换成入口卡 */
+  .dfan-item.more{border:0; padding:0; background:none; font:inherit; cursor:pointer}
+  .dfan-item.more .dfan-in{display:block; background:#FFF; border-style:dashed;
+    border-color:rgba(0,129,255,.46); box-shadow:0 6px 18px rgba(48,49,51,.08)}
+  .dfan-item.more:hover .dfan-in{background:var(--b1); border-color:var(--b6);
+    box-shadow:0 16px 30px rgba(48,49,51,.18)}
+  .dfan-morebox{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
+    height:calc(var(--w) * .625 + 21px)}
+  .dfan-morebox b{font-size:19px; line-height:24px; font-weight:600; color:var(--b7);
+    font-variant-numeric:tabular-nums; letter-spacing:-.01em}
+  .dfan-morebox i{font-style:normal; font-size:10.5px; line-height:14px; color:var(--n5)}
+
+  /* 删除：右上角关闭钮，略微越出卡片边界（悬停/聚焦时出现） */
+  .dfan-x{position:absolute; right:-8px; top:-8px; width:20px; height:20px; z-index:3;
+    display:flex; align-items:center; justify-content:center; border-radius:50%;
+    background:#FFF; color:var(--n7); border:1px solid var(--n4);
+    box-shadow:0 3px 9px rgba(48,49,51,.24); cursor:pointer;
+    opacity:0; transform:scale(.86);
+    transition:opacity .16s, transform .16s, color .15s, border-color .15s, background .15s}
+  .dfan-item:hover .dfan-x,.dfan-item:focus-within .dfan-x{opacity:1; transform:none}
+  .dfan-x:hover{color:var(--n8); border-color:var(--n4); background:#FFF}
+  .dfan-x:focus-visible{opacity:1; outline:2px solid var(--b6); outline-offset:1px}
+  .dfan-x svg{width:11px; height:11px; display:block}
+  @media (hover:none){ .dfan-x{opacity:1; transform:none} }
+  .dfan-item.out{opacity:0 !important; pointer-events:none; transition:opacity .16s ease !important}
+  .dfan-item.out .dfan-in{transform:scale(.9)}
+  .dfan-item.settled{opacity:1 !important; transition:none !important}
+  .dfan-empty{position:absolute; left:0; top:0; white-space:nowrap;
+    transform:translate(-50%,-100%) translateY(-10px);
+    color:var(--n6); font-size:12px; line-height:18px}
+
+  /* 撤回条：删除后浮出，点一次撤回一个 */
+  .dfan-undo{position:fixed; left:50%; bottom:26px; z-index:3;
+    display:flex; align-items:center; gap:10px; padding:9px 10px 9px 14px;
+    background:rgba(48,49,51,.94); color:#FFF; border-radius:10px; font-size:12px; line-height:18px;
+    box-shadow:0 12px 30px rgba(30,34,40,.28); opacity:0; pointer-events:none;
+    transform:translate(-50%, 10px);
+    transition:opacity .2s ease, transform .24s cubic-bezier(.2,.7,.3,1)}
+  .dfan-undo.on{opacity:1; pointer-events:auto; transform:translate(-50%, 0)}
+  .dfan-undo .du-t{color:rgba(255,255,255,.84); font-variant-numeric:tabular-nums}
+  .dfan-undo .du-t b{color:#FFF; font-weight:600}
+  .dfan-undo .du-n{color:rgba(255,255,255,.48); font-size:11px}
+  .dfan-undo .du-b{height:26px; padding:0 12px; border:0; border-radius:6px; cursor:pointer;
+    background:var(--b6); color:#FFF; font:inherit; font-size:12px; font-weight:500}
+  .dfan-undo .du-b:hover{background:var(--b7)}
+
+  /* 删除二次确认：浮在扇形与撤回条之上 */
+  .dfan-dlg{position:absolute; inset:0; z-index:320; display:none}
+  .dfan-dlg.in{display:block}
+  .dfan-dlg-mask{position:absolute; inset:0; background:rgba(28,31,36,.30);
+    opacity:0; transition:opacity .18s ease}
+  .dfan-dlg.on .dfan-dlg-mask{opacity:1}
+  .dfan-dlg-card{position:absolute; left:50%; top:50%; width:340px; max-width:calc(100vw - 40px);
+    padding:20px 20px 16px; background:#FFF; border-radius:12px; outline:none;
+    box-shadow:0 24px 56px rgba(24,28,34,.28);
+    opacity:0; transform:translate(-50%,-50%) scale(.96);
+    transition:opacity .18s ease, transform .22s cubic-bezier(.2,.7,.3,1)}
+  .dfan-dlg.on .dfan-dlg-card{opacity:1; transform:translate(-50%,-50%) scale(1)}
+  .dfan-dlg-card h4{margin:0; font-size:14px; line-height:22px; font-weight:600; color:var(--n8);
+    font-variant-numeric:tabular-nums}
+  .dfan-dlg-card p{margin:7px 0 0; color:var(--n6); font-size:12.5px; line-height:20px}
+  .dfan-dlg-a{display:flex; justify-content:flex-end; gap:8px; margin-top:18px}
+  .dfan-dlg-a button{height:32px; padding:0 16px; border-radius:8px; font:inherit; font-size:12.5px;
+    font-weight:500; cursor:pointer; border:1px solid var(--n3); background:#FFF; color:var(--n7);
+    transition:border-color .15s, color .15s, background .15s}
+  .dfan-dlg-a button:hover{border-color:var(--n4); color:var(--n8)}
+  .dfan-dlg-a button:focus-visible{outline:2px solid var(--b6); outline-offset:2px}
+  .dfan-dlg-a .dlg-ok{background:#D54941; border-color:#D54941; color:#FFF}
+  .dfan-dlg-a .dlg-ok:hover{background:#BE3A33; border-color:#BE3A33; color:#FFF}
+
+  /* 全量版本清单：浮层内的可滚动列表 */
+  .dfan-sheet{position:absolute; left:0; top:0; width:var(--sw,520px); max-height:var(--sh,320px);
+    display:flex; flex-direction:column; overflow:hidden; background:#FFF;
+    border:1px solid var(--n3); border-radius:12px; box-shadow:0 26px 60px rgba(48,49,51,.26);
+    opacity:0; pointer-events:none;
+    transform:translate(calc(-50% + var(--sx,0px)), calc(-100% - 14px)) translateY(6px);
+    transition:opacity .22s ease, transform .26s cubic-bezier(.2,.7,.3,1)}
+  .dfan-fan.list .dfan-sheet{opacity:1; pointer-events:auto;
+    transform:translate(calc(-50% + var(--sx,0px)), calc(-100% - 14px))}
+  .dfan-fan.list.sd .dfan-sheet{transform:translate(calc(-50% + var(--sx,0px)), 12px)}
+  .dfan-fan.list .dfan-item{opacity:0 !important; pointer-events:none; transition-delay:0s !important}
+  .dfan-sheet .ds-head{display:flex; align-items:center; gap:8px; padding:12px 14px 10px;
+    border-bottom:1px solid var(--n2); flex:0 0 auto}
+  .ds-head b{font-size:13px; line-height:18px; font-weight:600; color:var(--n8)}
+  .ds-head .ds-n{color:var(--n5); font-size:11.5px; font-variant-numeric:tabular-nums}
+  .ds-back{margin-left:auto; height:26px; padding:0 10px; border:1px solid var(--n3); border-radius:6px;
+    background:#FFF; color:var(--n6); font:inherit; font-size:11.5px; cursor:pointer;
+    display:inline-flex; align-items:center; transition:border-color .15s, color .15s}
+  .ds-back:hover{border-color:var(--n4); color:var(--n8)}
+  .ds-list{overflow:auto; padding:6px; flex:1 1 auto; min-height:0}
+  .ds-row{display:flex; align-items:center; gap:10px; padding:7px 8px; border-radius:8px;
+    text-decoration:none; transition:background .14s}
+  .ds-row:hover{background:var(--n1)}
+  .ds-row.cur{background:var(--b1)}
+  .ds-v{flex:0 0 auto; min-width:30px; height:18px; padding:0 5px; border-radius:4px;
+    display:inline-flex; align-items:center; justify-content:center; background:var(--n2);
+    color:var(--n7); font-size:10.5px; font-weight:600; font-variant-numeric:tabular-nums}
+  .ds-row.cur .ds-v{background:var(--b6); color:#FFF}
+  .ds-t{flex:1 1 auto; min-width:0; color:var(--n8); font-size:12.5px; line-height:18px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .ds-m{flex:0 0 auto; color:var(--n5); font-size:11px; font-variant-numeric:tabular-nums}
+  .ds-row .pill{flex:0 0 auto}
+  @media (prefers-reduced-motion: reduce){
+    .dfan-folder,.dfan-item,.dfan-veil,.dfan-in{transition-duration:.01ms !important}
+  }
+
+  /* ---------- 对比结论 ---------- */
+  .verdict{margin-top:44px; padding-top:28px; border-top:1px solid var(--n3)}
+  .verdict h2{margin:0 0 4px; font-size:16px; font-weight:600; line-height:26px}
+  .verdict .vs{margin:0 0 16px; color:var(--n6); font-size:12.5px}
+  table.cmp{width:100%; border-collapse:collapse; background:#FFF;
+    border:1px solid var(--n3); border-radius:10px; overflow:hidden}
+  table.cmp th, table.cmp td{padding:9px 12px; text-align:left; font-size:12px;
+    border-bottom:1px solid var(--n2); vertical-align:top}
+  table.cmp thead th{background:var(--n1); color:var(--n7); font-weight:600; font-size:12px}
+  table.cmp thead th.rec{background:var(--b1); color:var(--b7)}
+  table.cmp tbody th{color:var(--n6); font-weight:500; width:19%}
+  table.cmp tbody td{color:var(--n7)}
+  table.cmp tbody td.rec{background:#F8FCFF}
+  table.cmp tbody tr:last-child th, table.cmp tbody tr:last-child td{border-bottom:0}
+  .rank{display:inline-flex; align-items:flex-start; gap:6px; line-height:18px}
+  .rank i{font-style:normal; display:inline-flex; align-items:center; justify-content:center;
+    width:16px; height:16px; border-radius:4px; background:var(--n2); color:var(--n6);
+    font-size:10px; font-weight:600}
+  .rank i.good{background:var(--g1); color:var(--g6)}
+  .rank i.mid{background:#FFF4E0; color:#A96A00}
+  .rank i.low{background:#FDECEC; color:#B4342F}
+
+  .final{margin-top:18px; padding:16px 18px; border:1px solid var(--b2); border-radius:10px;
+    background:linear-gradient(180deg,#F6FBFF,#FFF)}
+  .final h3{margin:0 0 8px; font-size:13.5px; font-weight:600; color:var(--b7)}
+  .final ol{margin:0; padding-left:19px; color:var(--n7); font-size:12.5px; line-height:21px}
+  .final li{margin:3px 0}
+  .final code{padding:1px 5px; border-radius:4px; background:var(--n1); color:var(--n7);
+    font-size:11.5px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+
+  @media (max-width:860px){
+    .b-card{flex-direction:column}
+    .b-card .hero{flex:0 0 auto; width:100%; border-right:0; border-bottom:1px solid var(--n2)}
+    .vrow .vz{display:none}
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar"><div class="wrap">
+  <div class="crumb">智能数据预测 <i>/</i> 工作台优化 <i>/</i> 文件模块</div>
+  <h1>文件模块 · UI 与交互优化</h1>
+  <p class="sub">一条原则：<strong>最新版本做视觉主语，旧版本退为可追溯的次级线索</strong>。单版本模块不出现任何版本区块。以下四套方案用同一批真实文件与截图渲染，切换查看。</p>
+
+  <div class="issues">
+    <div class="issue"><b>最新版与旧版权重相同</b><span>2×2 网格里最新只是四格之一，扫不出哪份是当前</span></div>
+    <div class="issue"><b>收起态只有图</b><span>没有版本号 / 日期 / 状态，必须展开才知道</span></div>
+    <div class="issue"><b>单文件也套 2×2</b><span>1 张图配 3 个虚线空位，视觉空洞</span></div>
+    <div class="issue"><b>同一区域两种点击行为</b><span>点图打开、点空白展开，容易误触</span></div>
+  </div>
+</div></header>
+
+<main class="wrap">
+
+  <div class="switcher">
+    <span class="sl">方案</span>
+    <button class="swbtn" type="button" data-pane="a"><span class="k">A</span>画廊</button>
+    <button class="swbtn" type="button" data-pane="b"><span class="k">B</span>行式</button>
+    <button class="swbtn" type="button" data-pane="c"><span class="k">C</span>层叠</button>
+    <button class="swbtn" type="button" data-pane="d"><span class="k">D</span>层叠 2</button>
+    <span class="swtag" id="swtag"></span>
+  </div>
+
+  <section class="pane" id="pane-a">
+    <div class="phead">
+      <h2><em>方案 A</em>画廊 —— 大图做主图，旧版压成胶片条</h2>
+      <p>最新版以 16:10 大图独占卡片上部，左上角角标标注「当前 · vN」。旧版在底部排成一条 58px 高的胶片，灰度弱化、悬停还原。<strong>卡片全部等高</strong>：底部栏统一 62px，单版本时这一栏转为文件信息（格式 / 日期 / 大小 / 打开），既不出生版本区块，也不留空位。</p>
+      <div class="spec"><span>最新版视觉权重 高</span><span>旧版可读性 低</span><span>卡片全部等高</span><span>双列排布</span></div>
+    </div>
+    <div class="a-grid" id="aGrid"></div>
+  </section>
+
+  <section class="pane" id="pane-b">
+    <div class="phead">
+      <h2><em>方案 B</em>行式 —— 主图 + 版本记录表</h2>
+      <p>左侧固定 288px 主图，右侧是完整信息：模块名、当前版本高亮块、一行说明，下方「版本记录」表逐行列出全部版本（版本号 / 名称 / 状态 / 日期 / 大小），当前行蓝底高亮。单版本时整张表不出现，右侧只剩标题 + 说明 + 打开按钮。</p>
+      <div class="spec"><span>最新版视觉权重 高</span><span>旧版可读性 高</span><span>单版本退化 最自然</span></div>
+    </div>
+    <div class="b-list" id="bList"></div>
+  </section>
+
+  <section class="pane" id="pane-c">
+    <div class="phead">
+      <h2><em>方案 C</em>层叠 —— 最新在前，旧版压成纸片</h2>
+      <p>最新版是唯一实体卡片，旧版变成后面两层错位的「纸片」，悬停时纸片微微上浮，暗示下面还有东西。点击「查看 N 个旧版本」向下展开列表。单版本时纸片层自动消失，只剩一张卡。</p>
+      <div class="spec"><span>最新版视觉权重 最高</span><span>旧版可读性 低</span><span>单版本退化 略空</span></div>
+    </div>
+    <div class="c-grid" id="cGrid"></div>
+  </section>
+
+  <section class="pane" id="pane-d">
+    <div class="phead">
+      <h2><em>方案 D</em>层叠 2 —— 旧版向上扇形展开 + 蒙层聚焦</h2>
+      <p>收起态与 C 一致：最新版是唯一实体卡，旧版压成后面两层错位纸片。点击卡片本身或上方的纸片区后，<strong>页面其余部分压暗并轻微模糊</strong>，卡片原地不动（上方空间不够时只向下让出最小距离）；旧版本从卡片顶端<strong>沿一条弧线向上扇形铺开</strong>——每张卡按弧线切线角度倾斜、错峰飞出，中间那张在最上层。悬停任一张上浮，点击直接打开对应文件。旧版超过 5 个时，末位替换为「+N 更早版本」入口卡，点开是全量版本清单，当前版高亮。悬停任一张历史版本，右上角浮出关闭钮，点击弹出二次确认（文件保留 7 天、到期自动清除）；确认后底部撤回条可逐个恢复。点蒙层、按 Esc 或再点卡片底部栏即收回原位。</p>
+      <div class="spec"><span>最新版视觉权重 最高</span><span>旧版沿弧线展开</span><span>扇面 5 张，其余折叠</span><span>删除需二次确认 · 保留 7 天</span><span>蒙层聚焦</span></div>
+    </div>
+    <div class="d-grid" id="dGrid"></div>
+  </section>
+
+  <section class="verdict">
+    <h2>四套方案对比</h2>
+    <p class="vs">按「设计师第 20 轮迭代时需要快速定位最新版」这个真实场景打分。</p>
+    <table class="cmp">
+      <thead>
+        <tr><th></th><th class="rec">A 画廊（已选）</th><th>B 行式</th><th>C 层叠</th><th>D 层叠 2</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>最新版的识别速度</th>
+          <td class="rec"><span class="rank"><i class="good">高</i>大图 + 角标，一眼即知</span></td>
+          <td><span class="rank"><i class="good">高</i>主图 + 蓝色当前行，双重锚点</span></td>
+          <td><span class="rank"><i class="good">高</i>唯一实体卡，最抢眼</span></td><td><span class="rank"><i class="mid">中</i>层叠卡抢眼，展开后当前版居中压底</span></td></tr>
+        <tr><th>旧版可读性</th>
+          <td class="rec"><span class="rank"><i class="low">低</i>缩略图只有版本号，内容靠打开</span></td>
+          <td><span class="rank"><i class="good">高</i>逐行带版本 / 日期 / 状态 / 大小</span></td>
+          <td><span class="rank"><i class="low">低</i>需先展开才能看到</span></td><td><span class="rank"><i class="good">高</i>展开即扇形卡片，图与版本号俱在</span></td></tr>
+        <tr><th>卡片是否等高</th>
+          <td class="rec"><span class="rank"><i class="good">是</i>底部栏固定 62px，两类卡完全对齐</span></td>
+          <td><span class="rank"><i class="good">是</i>主图撑高，单版本内容居中</span></td>
+          <td><span class="rank"><i class="low">否</i>有旧版的卡多出 18px 纸片层</span></td><td><span class="rank"><i class="mid">近似</i>统一预留 20px 纸片位，底边对齐</span></td></tr>
+        <tr><th>单版本时的呈现</th>
+          <td class="rec"><span class="rank"><i class="good">信息条</i>底部转为格式 / 日期 / 大小 / 打开</span></td>
+          <td><span class="rank"><i class="good">自然</i>版本表不渲染，正文居中</span></td>
+          <td><span class="rank"><i class="mid">略空</i>纸片层消失，像缺了一层</span></td><td><span class="rank"><i class="good">自然</i>无纸片、无展开条，底栏即文件条</span></td></tr>
+        <tr><th>点击行为</th>
+          <td class="rec"><span class="rank"><i class="good">唯一</i>主图与缩略图都是「打开文件」</span></td>
+          <td><span class="rank"><i class="good">唯一</i>主图与行都是「打开文件」</span></td>
+          <td><span class="rank"><i class="low">两种</i>卡片打开 / 按钮展开，仍有二义</span></td><td><span class="rank"><i class="good">明确</i>图 = 打开文件，底栏 = 展开版本</span></td></tr>
+        <tr><th>6 模块一屏所需滚动</th>
+          <td class="rec">约 1.6 屏（双列，卡片最紧凑）</td>
+          <td>约 2 屏（单列，信息最全）</td>
+          <td>约 1.4 屏（双列，纸片占位）</td><td>约 1.4 屏（浮层不占布局）</td></tr>
+        <tr><th>实现复杂度</th>
+          <td class="rec">低，双列 grid + 一条底部栏</td>
+          <td>中，版本行布局与列宽对齐</td>
+          <td>高，层叠定位 + 展开状态</td><td>高，浮层 + 弧线定位 + 蒙层</td></tr>
+      </tbody>
+    </table>
+
+    <div class="final">
+      <h3>结论：A 画廊，本轮已按「卡片等高」优化</h3>
+      <ol>
+        <li><strong>首屏扫视最快</strong>：7 张卡双列排布，大图即内容，1.6 屏看完所有模块，比行式少滚半屏。</li>
+        <li><strong>卡片全部等高</strong>：底部栏固定 62px —— 有旧版时装胶片，无旧版时装「格式 · 日期 · 大小 · 打开文件」。同一行的高低差被彻底消掉，网格始终整齐。</li>
+        <li><strong>旧版弱化的代价可接受</strong>：缩略图只给版本号，因为看旧版的第一诉求是「认出是哪一版」，认出后点开即可，不需要在这一层读全信息。</li>
+      </ol>
+      <p style="margin:10px 0 0; color:var(--n6); font-size:12px; line-height:19px">
+        落地时：02 区 6 个模块与 01 主稿共用同一个卡片模板（主稿即「单版本」这一特例，底部自然走信息条），01 区现有的 21:9 横幅大图并入卡片后删除。
+      </p>
+      <p style="margin:6px 0 0; color:var(--n6); font-size:12px; line-height:19px">
+        D 是在 C 的形态上换掉展开方式：纸片层叠不动，展开结果由「折叠列表」改为「旧版沿弧线向上扇形铺开 + 蒙层聚焦」。若最终选层叠，D 的展开可以直接替换 C 的列表，不需要改数据结构。
+      </p>
+    </div>
+  </section>
+
+</main>
+
+<!-- 方案 D：扇形展开浮层（蒙层 / 卡片副本 / 扇形层） -->
+<div class="dfan" id="dfan" aria-hidden="true">
+  <div class="dfan-veil"></div>
+  <div class="dfan-folder"></div>
+  <div class="dfan-fan"></div>
+  <div class="dfan-undo" id="dfanUndo" role="status" aria-live="polite"></div>
+  <div class="dfan-dlg" id="dfanDlg" aria-hidden="true">
+    <div class="dfan-dlg-mask"></div>
+    <div class="dfan-dlg-card" role="dialog" aria-modal="true" tabindex="-1" aria-labelledby="dfanDlgT" aria-describedby="dfanDlgP">
+      <h4 id="dfanDlgT">删除版本？</h4>
+      <p id="dfanDlgP">文件将保留 7 天，期间可撤回，7 天后自动清除。</p>
+      <div class="dfan-dlg-a">
+        <button class="dlg-no" type="button">取消</button>
+        <button class="dlg-ok" type="button">删除</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  var THUMB = function(f){ return './thumbs/' + encodeURIComponent(f) + '.jpg'; };
+  var LINK  = function(f){ return './' + encodeURIComponent(f) + '.html'; };
+
+  /* 数据：与索引页 01 / 02 区一致，versions 按「新 → 旧」排列 */
+  var MODULES = [
+    {
+      id:'main', name:'设计主稿', note:'整份需求只维护这一个文件，所有迭代都合并落在它身上。单文件自包含，双击 file:// 即可渲染。',
+      versions:[
+        {v:'v1', title:'智能数据预测设计稿-20261117-v1', file:'智能数据预测设计稿-20261117-v1',
+         date:'11-17', size:'1093 KB', state:'交付稿', tone:'blue'}
+      ]
+    },
+    {
+      id:'check', name:'核对数据抽屉',
+      note:'索引区固定，特征区与目标区共用一条可滑动的分界线；点哪一侧该侧露出的列变多。特征是鼠标框选、目标单选。',
+      versions:[
+        {v:'v4', title:'不可选列样式-3方案', file:'智能数据预测-核对数据与字段抽屉-不可选列样式-3方案-20261120',
+         date:'11-20', size:'45.6 KB', state:'待合并', tone:'green'},
+        {v:'v3', title:'优化方案 v3', file:'智能数据预测-核对数据与字段抽屉-优化方案-v3-20261119',
+         date:'11-20', size:'58.1 KB', state:'已取代', tone:'gray'},
+        {v:'v2', title:'优化方案 v2', file:'智能数据预测-核对数据抽屉-优化方案-v2-20261119',
+         date:'11-19', size:'32.7 KB', state:'已取代', tone:'gray'},
+        {v:'v1', title:'优化方案 v1', file:'智能数据预测-核对数据抽屉-优化方案-20261119',
+         date:'11-19', size:'44.4 KB', state:'已取代', tone:'gray'}
+      ]
+    },
+    {
+      id:'confirm', name:'确认预测条件卡片',
+      note:'四版同一张卡片的信息精简：A 精简去重、B 摘要优先、C 分组重排（已落地）、D 推荐 / 自定义。',
+      versions:[
+        {v:'v1', title:'优化方案-20261119', file:'智能数据预测-确认预测条件卡片-优化方案-20261119',
+         date:'11-19', size:'68.4 KB', state:'已落地 C', tone:'green'}
+      ]
+    },
+    {
+      id:'result-card', name:'预测结果卡片',
+      note:'对话流里「AR 良品产出量 · 预测结果」的四种做法：A 结论前置、B 图 + 逐日表、C 极简摘要、D 历史衔接。',
+      versions:[
+        {v:'v1', title:'优化方案-20261120', file:'智能数据预测-预测结果卡片-优化方案-20261120',
+         date:'11-20', size:'755.1 KB', state:'四版未定稿', tone:'gray'}
+      ]
+    },
+    {
+      id:'result-drawer', name:'结果与建议抽屉',
+      note:'信息分层四版：A 结论前置、B 摘要卡 + 分段折叠、C 左栏导航、D 问答式。已补齐版本切换与对比明细。',
+      versions:[
+        {v:'v1', title:'优化方案-20261119', file:'智能数据预测-结果与建议抽屉-优化方案-20261119',
+         date:'11-19', size:'66.4 KB', state:'未合并', tone:'gray'}
+      ]
+    },
+    {
+      id:'upload', name:'上传数据文件弹窗',
+      note:'四种信息重排：A 单列收敛、B 双区分层、C 极简 + 二级、D 表格化。',
+      versions:[
+        {v:'v1', title:'优化方案-20261119', file:'智能数据预测-上传数据文件弹窗-优化方案-20261119',
+         date:'11-19', size:'48.5 KB', state:'未合并', tone:'gray'}
+      ]
+    },
+    {
+      id:'coldstart', name:'对话页冷启动',
+      note:'页签切换四版：A 居中式引导（已落地）、B 三段式填空、C 工作台式、D 示例预演。',
+      versions:[
+        {v:'v1', title:'冷启动方案-20261118', file:'智能数据预测-对话页冷启动方案-20261118',
+         date:'11-18', size:'53.7 KB', state:'已落地 A', tone:'green'}
+      ]
+    }
+  ];
+
+  function cur(m){ return m.versions[0]; }
+  function olds(m){ return m.versions.slice(1); }
+  function isMulti(m){ return m.versions.length > 1; }
+  function total(m){ return m.versions.length; }
+  /* 主图角标：主稿标「交付稿」，多版本标当前版本号，单版本标「当前」 */
+  function capOf(m){
+    if (m.id === 'main') return '交付稿';
+    return isMulti(m) ? ('当前 · ' + cur(m).v) : '当前';
+  }
+
+  function esc(s){
+    return String(s).replace(/[&<>"]/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];
+    });
+  }
+
+  function heroHTML(v, capText, capDark){
+    return '<a class="hero" href="' + LINK(v.file) + '" target="_blank" title="' + esc(v.title) + '">'
+      + '<img src="' + THUMB(v.file) + '" alt="' + esc(v.title) + ' 预览" loading="lazy"'
+      + ' onerror="this.style.display=\'none\'">'
+      + '<span class="cap' + (capDark ? ' dark' : '') + '">' + esc(capText) + '</span>'
+      + '</a>';
+  }
+
+  /* ---------- 方案 A ---------- */
+  function renderA(){
+    return MODULES.map(function(m){
+      var c = cur(m), os = olds(m);
+      /* 底部栏：高度固定，保证「有旧版 / 无旧版」两类卡片等高 */
+      var foot;
+      if (os.length){
+        var cells = os.slice(0, 3).map(function(o){
+          return '<a class="a-thumb" href="' + LINK(o.file) + '" target="_blank" title="' + esc(o.title) + ' · ' + o.date + '">'
+            + '<img src="' + THUMB(o.file) + '" alt="' + esc(o.title) + '" loading="lazy"'
+            + ' onerror="this.parentNode.style.display=\'none\'">'
+            + '<span class="tv">' + esc(o.v) + '</span></a>';
+        }).join('');
+        if (os.length > 3){
+          cells += '<span class="a-thumb more">+' + (os.length - 3) + '</span>';
+        }
+        /* 胶片满 3 格时右侧不再放 CTA，避免溢出；主图本身可点开当前版 */
+        var cta = (os.length <= 3)
+          ? '<a class="fopen" href="' + LINK(c.file) + '" target="_blank">打开文件'
+            + '<svg viewBox="0 0 12 12" fill="none"><path d="M3.5 8.5L8.5 3.5M8.5 3.5H4.6M8.5 3.5v3.9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>'
+          : '';
+        foot = '<div class="a-foot"><span class="fl">旧版</span>' + cells + cta + '</div>';
+      } else {
+        /* 单版本：不出现版本区块，同一位置放文件信息，高度与胶片条一致 */
+        foot = '<div class="a-foot">'
+          + '<span class="fx">HTML</span>'
+          + '<span class="fd">' + c.date + '</span>'
+          + '<span class="fdot">·</span>'
+          + '<span class="fz">' + c.size + '</span>'
+          + '<a class="fopen" href="' + LINK(c.file) + '" target="_blank">打开文件'
+          +   '<svg viewBox="0 0 12 12" fill="none"><path d="M3.5 8.5L8.5 3.5M8.5 3.5H4.6M8.5 3.5v3.9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+          + '</a></div>';
+      }
+      var capText = capOf(m);
+      return '<article class="a-card" id="a-' + m.id + '">'
+        + heroHTML(c, capText, false)
+        + '<div class="a-meta">'
+        +   '<div class="a-line1"><b>' + esc(m.name) + '</b>'
+        +     '<span class="pill ' + c.tone + '">' + esc(c.state) + '</span></div>'
+        +   '<div class="a-line2">' + esc(c.v) + ' · ' + c.date + ' · ' + c.size
+        +     (isMulti(m) ? (' · 共 ' + total(m) + ' 个版本') : '') + '</div>'
+        +   '<p class="a-note">' + esc(m.note) + '</p>'
+        + '</div>'
+        + foot
+        + '</article>';
+    }).join('');
+  }
+
+  /* ---------- 方案 B ---------- */
+  function renderB(){
+    return MODULES.map(function(m){
+      var c = cur(m), os = olds(m);
+      var rows = '';
+      if (isMulti(m)){
+        rows = '<div class="b-vers"><div class="vt"><span>版本记录 ' + total(m) + '</span><i></i></div>'
+          + m.versions.map(function(v, i){
+              var curRow = (i === 0);
+              return '<a class="vrow' + (curRow ? ' cur' : '') + '" href="' + LINK(v.file) + '" target="_blank">'
+                + '<span class="vv">' + esc(v.v) + '</span>'
+                + '<span class="vn">' + esc(v.title) + '</span>'
+                + '<span class="vs"><span class="pill ' + v.tone + '">' + (curRow ? '当前' : esc(v.state)) + '</span></span>'
+                + '<span class="vd">' + v.date + '</span>'
+                + '<span class="vz">' + v.size + '</span>'
+                + '</a>';
+            }).join('')
+          + '</div>';
+      }
+      /* 单版本：无版本表，用一行中性元信息补足版本号 / 日期 / 大小 / 状态 */
+      var meta = isMulti(m) ? '' :
+        '<div class="b-meta"><span>' + esc(c.v) + '</span><i>·</i>' + c.date
+        + '<i>·</i>' + c.size + '<i>·</i>' + esc(c.state) + '</div>';
+
+      return '<article class="b-card" id="b-' + m.id + '">'
+        + heroHTML(c, capOf(m), false)
+        + '<div class="b-info">'
+        +   '<div class="b-head"><h3>' + esc(m.name) + '</h3>'
+        +     '<a class="b-open" href="' + LINK(c.file) + '" target="_blank">打开'
+        +       '<svg viewBox="0 0 12 12" fill="none"><path d="M3.5 8.5L8.5 3.5M8.5 3.5H4.6M8.5 3.5v3.9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+        +     '</a></div>'
+        +   '<p class="b-note">' + esc(m.note) + '</p>'
+        +   meta
+        +   rows
+        + '</div>'
+        + '</article>';
+    }).join('');
+  }
+
+  /* ---------- 方案 C ---------- */
+  function renderC(){
+    return MODULES.map(function(m){
+      var c = cur(m), os = olds(m);
+      var backs = '';
+      if (os.length >= 1) backs += '<span class="c-back b1"></span>';
+      if (os.length >= 2) backs += '<span class="c-back b2"></span>';
+      var more = '', oldList = '';
+      if (os.length){
+        more = '<button class="c-more" type="button" aria-expanded="false">查看 ' + os.length + ' 个旧版本'
+          + '<svg viewBox="0 0 14 14" fill="none"><path d="M3.5 5.5L7 9l3.5-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+          + '</button>';
+        oldList = '<div class="c-old"><div class="in"><ul>'
+          + os.map(function(o){
+              return '<li><a href="' + LINK(o.file) + '" target="_blank">'
+                + '<span class="vv">' + esc(o.v) + '</span>'
+                + '<span class="vn">' + esc(o.title) + '</span>'
+                + '<span class="pill ' + o.tone + '">' + esc(o.state) + '</span>'
+                + '<span class="vd">' + o.date + '</span></a></li>';
+            }).join('')
+          + '</ul></div></div>';
+      }
+      return '<div class="c-stack' + (os.length ? ' has-back' : '') + '" id="c-' + m.id + '">'
+        + backs
+        + '<article class="c-card">'
+        +   heroHTML(c, capOf(m), false)
+        +   '<div class="c-bar"><b>' + esc(m.name) + '</b>'
+        +     '<span class="pill ' + c.tone + '">' + esc(c.state) + '</span>'
+        +     '<span class="cm">' + (isMulti(m) ? (total(m) + ' 个版本') : (c.date + ' · ' + c.size)) + '</span>'
+        +   '</div>'
+        + '</article>'
+        + more + oldList
+        + '</div>';
+    }).join('');
+  }
+
+  /* ---------- 方案 D ---------- */
+  var ARROW_MINI = '<svg viewBox="0 0 12 12" fill="none" width="10" height="10"><path d="M3.5 8.5L8.5 3.5M8.5 3.5H4.6M8.5 3.5v3.9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var CHEV_MINI = '<svg viewBox="0 0 14 14" fill="none" width="11" height="11"><path d="M3.5 5.5L7 9l3.5-3.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  function renderD(){
+    return MODULES.map(function(m){
+      var c = cur(m), os = olds(m), multi = isMulti(m);
+      var backs = '';
+      if (os.length >= 1) backs += '<span class="d-back b1"></span>';
+      if (os.length >= 2) backs += '<span class="d-back b2"></span>';
+
+      var bar;
+      if (multi){
+        bar = '<button class="d-bar" type="button" aria-expanded="false">'
+          + '<b>' + esc(m.name) + '</b>'
+          + '<span class="pill ' + c.tone + '">' + esc(c.state) + '</span>'
+          + '<span class="dm">' + total(m) + ' 个版本</span>'
+          + '<span class="dchev">' + CHEV_MINI + '</span>'
+          + '</button>';
+      } else {
+        bar = '<a class="d-bar" href="' + LINK(c.file) + '" target="_blank">'
+          + '<b>' + esc(m.name) + '</b>'
+          + '<span class="pill ' + c.tone + '">' + esc(c.state) + '</span>'
+          + '<span class="dm">' + c.date + ' · ' + c.size + '</span>'
+          + '<span class="dopen">' + ARROW_MINI + '</span>'
+          + '</a>';
+      }
+
+      return '<div class="d-stack' + (multi ? ' is-multi' : '') + '" id="d-' + m.id + '">'
+        + backs
+        + '<article class="d-card">'
+        +   heroHTML(c, capOf(m), false)
+        +   bar
+        + '</article>'
+        + '</div>';
+    }).join('');
+  }
+
+  document.getElementById('aGrid').innerHTML = renderA();
+  document.getElementById('bList').innerHTML = renderB();
+  document.getElementById('cGrid').innerHTML = renderC();
+  document.getElementById('dGrid').innerHTML = renderD();
+
+  /* ---------- D 的展开：蒙层 + 卡片浮起 + 旧版沿弧线扇形铺开 ---------- */
+  var dfan = document.getElementById('dfan');
+  var dfanVeil = dfan.querySelector('.dfan-veil');
+  var dfanFolder = dfan.querySelector('.dfan-folder');
+  var dfanFan = dfan.querySelector('.dfan-fan');
+  var dfanUndo = dfan.querySelector('.dfan-undo');
+  var dfanDlg = document.getElementById('dfanDlg');
+  var dlgT = dfanDlg.querySelector('h4');
+  var dlgCard = dfanDlg.querySelector('.dfan-dlg-card');
+  var dlgOk = dfanDlg.querySelector('.dlg-ok');
+  var dlgNo = dfanDlg.querySelector('.dlg-no');
+  var dlgCtx = null, dlgTimer = 0;
+  var dOpen = null, dTimer = 0;
+  var FAN_MAX = 5;                  /* 扇面最多摆几张，超出折叠成「+N」入口 */
+
+  function dMeta(id){
+    for (var i = 0; i < MODULES.length; i++){
+      if ('d-' + MODULES[i].id === id) return MODULES[i];
+    }
+    return null;
+  }
+
+  function dfanClose(){
+    if (!dOpen) return;
+    var stack = dOpen; dOpen = null;
+    dfanAskClose();
+    var bar = stack.querySelector('.d-bar');
+    /* 副本沿原路收回原位，蒙层与卡片同时淡出 */
+    dfan.classList.remove('on');
+    dfanFolder.style.transform = 'translate(0px,0px)';
+    if (bar && bar.tagName === 'BUTTON') bar.setAttribute('aria-expanded', 'false');
+    document.documentElement.classList.remove('dfan-lock');
+    window.clearTimeout(dTimer);
+    dTimer = window.setTimeout(function(){
+      if (dOpen) return;
+      dfan.classList.remove('in');
+      dfan.setAttribute('aria-hidden', 'true');
+      dfanFolder.innerHTML = '';
+      dfanFan.innerHTML = '';
+      dfanFan.classList.remove('list', 'sd');
+      dfanUndo.classList.remove('on');
+      dfanUndo.innerHTML = '';
+      dfanDlg.classList.remove('on', 'in');
+      dfanDlg.setAttribute('aria-hidden', 'true');
+      dlgCtx = null;
+      stack.classList.remove('is-open');
+      if (bar && document.body.contains(bar)) bar.focus({ preventScroll:true });
+    }, 480);
+  }
+
+  /* ---------- 删除：二次确认弹窗 ---------- */
+  function dfanAsk(m, el){
+    var v = el && el.getAttribute('data-v');
+    if (!v) return;
+    dlgCtx = { m: m, el: el };
+    dlgT.textContent = '删除 ' + v + '？';
+    window.clearTimeout(dlgTimer);
+    dfanDlg.classList.add('in');
+    dfanDlg.removeAttribute('aria-hidden');
+    void dfanDlg.offsetWidth;
+    dfanDlg.classList.add('on');
+    dlgCard.focus({ preventScroll: true });
+  }
+
+  function dfanAskClose(){
+    if (!dfanDlg.classList.contains('on')) return;
+    dfanDlg.classList.remove('on');
+    dfanDlg.setAttribute('aria-hidden', 'true');
+    window.clearTimeout(dlgTimer);
+    dlgTimer = window.setTimeout(function(){
+      if (dfanDlg.classList.contains('on')) return;
+      dfanDlg.classList.remove('in');
+      dlgCtx = null;
+    }, 200);
+  }
+
+  dlgNo.addEventListener('click', function(e){
+    e.preventDefault(); e.stopPropagation();
+    dfanAskClose();
+  });
+  dfanDlg.querySelector('.dfan-dlg-mask').addEventListener('click', function(e){
+    e.preventDefault(); e.stopPropagation();
+    dfanAskClose();
+  });
+  dlgOk.addEventListener('click', function(e){
+    e.preventDefault(); e.stopPropagation();
+    var c = dlgCtx;
+    dfanAskClose();
+    if (c) dfanDelete(c.m, c.el);
+  });
+  /* 焦点锁在弹窗里；Esc 交给全局键处理 */
+  dfanDlg.addEventListener('keydown', function(e){
+    if (e.key !== 'Tab' || !dfanDlg.classList.contains('on')) return;
+    e.preventDefault();
+    var order = [dlgNo, dlgOk];
+    var i = order.indexOf(document.activeElement);
+    if (e.shiftKey) i = i <= 0 ? order.length - 1 : i - 1;
+    else i = i >= order.length - 1 ? 0 : i + 1;
+    order[i].focus({ preventScroll: true });
+  });
+
+  /* ---------- 扇面：模型 / 渲染 / 删除与撤回 ---------- */
+  var fanCtx = null;      /* { m, stack, card, vw, cx, itemW, itemH, top } */
+
+  function isGone(m, v){ return (m.removed || []).indexOf(v) >= 0; }
+
+  /* 尚未删除的旧版数量 */
+  function oldsLeft(m){
+    var k = 0;
+    for (var i = 1; i < m.versions.length; i++) if (!isGone(m, m.versions[i].v)) k++;
+    return k;
+  }
+
+  function fanModel(m){
+    var c = fanCtx, itemW = c.itemW, itemH = c.itemH;
+    var availHalf = Math.min(c.cx - 12, c.vw - c.cx - 12);
+    var all = m.versions.slice(1).filter(function(v){ return !isGone(m, v.v); });
+    var n = all.length;
+    var capByWidth = Math.max(2, Math.floor((availHalf * 2) / (itemW + 34)) + 1);
+    var slots = Math.min(n, FAN_MAX, capByWidth);
+
+    /* 按各卡倾斜后的投影宽补偿中心距，让视觉缝隙一致、端卡不叠 */
+    var layoutFan = function(cnt, g){
+      if (cnt < 2) return { xs:[0], half:0, R:760, ths:[0] };
+      var hh = (cnt - 1) * (itemW + 34) / 2;
+      var rad = Math.max(760, hh / Math.sin(26 * Math.PI / 180));
+      var pos = [], ths = [], ws = [];
+      for (var i = 0; i < cnt; i++) pos[i] = (i - (cnt - 1) / 2) * (itemW + 34);
+      for (var pass = 0; pass < 4; pass++){
+        ths = pos.map(function(q){ return Math.asin(Math.max(-1, Math.min(1, q / rad))); });
+        ws = ths.map(function(t){ return itemW * Math.cos(t) + itemH * Math.abs(Math.sin(t)); });
+        var acc = [0];
+        for (var k = 1; k < cnt; k++) acc[k] = acc[k - 1] + (ws[k - 1] + ws[k]) / 2 + g;
+        var span = acc[cnt - 1];
+        pos = acc.map(function(q){ return q - span / 2; });
+        hh = span / 2;
+        rad = Math.max(760, hh / Math.sin(26 * Math.PI / 180));
+      }
+      ths = pos.map(function(q){ return Math.asin(Math.max(-1, Math.min(1, q / rad))); });
+      return { xs: pos, half: hh, R: rad, ths: ths };
+    };
+
+    var gap = 18, fan = layoutFan(slots, gap);
+    for (var guard = 0; guard < 8; guard++){
+      var eTh = Math.abs(fan.ths[0]);
+      var eBox = (itemW * Math.cos(eTh) + itemH * Math.sin(eTh)) / 2;
+      if (fan.half + eBox <= availHalf) break;
+      if (gap > 6) gap -= 4;
+      else if (slots > 2){ slots -= 1; gap = 18; }
+      else break;
+      fan = layoutFan(slots, gap);
+    }
+
+    var pack = n > slots;
+    var shown = pack ? all.slice(0, slots - 1) : all;
+    var lift = itemH / 2 + 50;
+    var D = fan.R - lift;
+    var thMax = Math.abs(fan.ths[0]);
+    var aabbH = itemH * Math.cos(thMax) + itemW * Math.sin(thMax);
+    return { all: all, n: n, slots: slots, pack: pack, shown: shown,
+             xs: fan.xs, ths: fan.ths, R: fan.R, half: fan.half,
+             D: D, lift: lift, need: lift + aabbH / 2 + 12 };
+  }
+
+  function fanHTML(m, model){
+    if (!model.n) return '<div class="dfan-empty">历史版本已全部删除</div>';
+    var itemW = fanCtx.itemW;
+    var mid = (model.slots - 1) / 2;
+    var seat = function(i){
+      var th = model.ths[i] || 0;
+      var y = model.D - model.R * Math.cos(th);
+      return ' style="--w:' + itemW + 'px;--x:' + Math.round(model.xs[i] || 0) + 'px;'
+        + '--y:' + Math.round(y) + 'px;--rot:' + (th * 180 / Math.PI).toFixed(1) + 'deg;'
+        + '--d:' + (170 + Math.round(Math.abs(i - mid) * 70)) + 'ms;'
+        + 'z-index:' + (46 - Math.round(Math.abs(i - mid) * 4)) + '"';
+    };
+
+    var cells = model.shown.map(function(v, i){
+      return '<a class="dfan-item" data-v="' + esc(v.v) + '" href="' + LINK(v.file) + '" target="_blank"'
+        + ' title="' + esc(v.title) + ' · ' + v.date + '"' + seat(i) + '>'
+        + '<span class="dfan-in">'
+        +   '<span class="dfan-shot"><img src="' + THUMB(v.file) + '" alt="' + esc(v.title) + ' 预览" loading="lazy">'
+        +     '<span class="dfan-v">' + esc(v.v) + '</span></span>'
+        +   '<span class="dfan-meta"><span class="dfan-t">' + esc(v.title) + '</span>'
+        +     '<span class="dfan-d">' + v.date + '</span></span>'
+        +   '<span class="dfan-x" role="button" tabindex="-1" aria-label="删除 ' + esc(v.v) + '" title="删除">'
+        +     '<svg viewBox="0 0 12 12" fill="none"><path d="M3.7 3.7l4.6 4.6M8.3 3.7l-4.6 4.6"'
+        +       ' stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>'
+        +   '</span>'
+        + '</span></a>';
+    });
+
+    if (model.pack){
+      cells.push('<button class="dfan-item more" type="button" aria-label="查看全部 ' + model.n + ' 个历史版本"'
+        + seat(model.slots - 1) + '>'
+        + '<span class="dfan-in"><span class="dfan-morebox"><b>+' + (model.n - model.shown.length) + '</b>'
+        +   '<i>更早版本</i></span></span></button>');
+    }
+    return cells.join('');
+  }
+
+  function bindFan(m, stack){
+    var mb = dfanFan.querySelector('.dfan-item.more');
+    if (mb) mb.addEventListener('click', function(e){
+      e.stopPropagation();
+      dfanShowAll(m, stack);
+    });
+    [].forEach.call(dfanFan.querySelectorAll('.dfan-x'), function(x){
+      x.addEventListener('click', function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        dfanAsk(m, x.closest('.dfan-item'));
+      });
+    });
+  }
+
+  /* 副本底栏的版本数跟着删除走 */
+  function syncBar(m){
+    var dm = dfanFolder.querySelector('.d-bar .dm');
+    if (dm) dm.textContent = (oldsLeft(m) + 1) + ' 个版本';
+  }
+
+  function dfanDelete(m, el){
+    if (!el || el.classList.contains('out')) return;
+    var v = el.getAttribute('data-v');
+    if (!v) return;
+    el.classList.add('out');
+    window.setTimeout(function(){
+      m.removed = m.removed || [];
+      m.removed.push(v);
+      repaintFan(m);
+      syncBar(m);
+      updateUndo(m);
+    }, 170);
+  }
+
+  /* 重排：老卡先落脚原位、下一帧推到新位；新补位的卡走入场动画 */
+  function repaintFan(m){
+    var old = {};
+    [].forEach.call(dfanFan.querySelectorAll('.dfan-item'), function(el){
+      if (el.classList.contains('more')) return;
+      old[el.getAttribute('data-v')] = [
+        el.style.getPropertyValue('--x'),
+        el.style.getPropertyValue('--y'),
+        el.style.getPropertyValue('--rot')
+      ];
+    });
+
+    dfanFan.innerHTML = fanHTML(m, fanModel(m));
+
+    [].forEach.call(dfanFan.querySelectorAll('.dfan-item'), function(el){
+      var o = old[el.getAttribute('data-v')];
+      if (!o) return;
+      el.dataset.tx = el.style.getPropertyValue('--x');
+      el.dataset.ty = el.style.getPropertyValue('--y');
+      el.dataset.trot = el.style.getPropertyValue('--rot');
+      el.style.setProperty('--x', o[0]);
+      el.style.setProperty('--y', o[1]);
+      el.style.setProperty('--rot', o[2]);
+      el.classList.add('settled');
+    });
+    bindFan(m, fanCtx.stack);
+    void dfanFan.offsetWidth;
+
+    window.requestAnimationFrame(function(){
+      window.requestAnimationFrame(function(){
+        [].forEach.call(dfanFan.querySelectorAll('.dfan-item.settled'), function(el){
+          el.classList.remove('settled');
+          if (el.dataset.tx){
+            el.style.setProperty('--x', el.dataset.tx);
+            el.style.setProperty('--y', el.dataset.ty);
+            el.style.setProperty('--rot', el.dataset.trot);
+            delete el.dataset.tx; delete el.dataset.ty; delete el.dataset.trot;
+          }
+        });
+      });
+    });
+  }
+
+  /* 撤回条：显示最近一次删除，点一次撤一个 */
+  function updateUndo(m){
+    var list = m.removed || [];
+    if (!list.length){
+      dfanUndo.classList.remove('on');
+      dfanUndo.innerHTML = '';
+      return;
+    }
+    var last = list[list.length - 1];
+    dfanUndo.innerHTML = '<span class="du-t">已删除 <b>' + esc(last) + '</b> · 保留 7 天</span>'
+      + (list.length > 1 ? '<span class="du-n">还有 ' + (list.length - 1) + ' 个</span>' : '')
+      + '<button class="du-b" type="button">撤回</button>';
+    dfanUndo.classList.add('on');
+    dfanUndo.querySelector('.du-b').addEventListener('click', function(e){
+      e.stopPropagation();
+      dfanUndoLast(m);
+    });
+  }
+
+  function dfanUndoLast(m){
+    if (!m.removed || !m.removed.length) return;
+    m.removed.pop();
+    repaintFan(m);
+    syncBar(m);
+    updateUndo(m);
+  }
+
+  function dfanOpen(stack){
+    var m = dMeta(stack.id);
+    if (!m || m.versions.length < 2) return;
+    if (dOpen) dfanClose();
+
+    var card = stack.querySelector('.d-card');
+    /* 锁滚动前先补上滚动条宽度，避免版面整体位移 */
+    var sbw = window.innerWidth - document.documentElement.clientWidth;
+    document.documentElement.style.setProperty('--dfan-sb', Math.max(0, sbw) + 'px');
+    document.documentElement.classList.add('dfan-lock');
+
+    var r = card.getBoundingClientRect();
+    var vw = window.innerWidth, vh = window.innerHeight;
+    var cx = r.left + r.width / 2;
+
+    /* 1) 上下文：小卡尺寸与重排基准 */
+    var itemW = Math.round(Math.max(112, Math.min(r.width * 0.42, 148)));
+    fanCtx = { m: m, stack: stack, card: card, vw: vw, cx: cx,
+               itemW: itemW, itemH: itemW * 0.82, top: 0 };
+
+    /* 2) 扇面模型：过滤已删版本 → 容量 → 排布 */
+    var model = fanModel(m);
+
+    /* 3) 原地展开：卡片不移动；只有上方空间不够时，才向下让出最小距离 */
+    var dy = r.top < model.need ? Math.round(model.need - r.top) : 0;
+    var maxDy = vh - 24 - r.bottom;
+    if (dy > maxDy) dy = Math.max(0, maxDy);
+    var top = r.top + dy;
+
+    dfanFolder.innerHTML = '';
+    var clone = card.cloneNode(true);
+    clone.removeAttribute('id');
+    var cbar = clone.querySelector('.d-bar');
+    if (cbar && cbar.tagName === 'BUTTON'){
+      cbar.setAttribute('aria-label', '收起历史版本');
+      cbar.addEventListener('click', dfanClose);
+    }
+    dfanFolder.appendChild(clone);
+    dfanFolder.style.left = r.left + 'px';
+    dfanFolder.style.top = r.top + 'px';
+    dfanFolder.style.width = r.width + 'px';
+    dfanFolder.style.transform = 'translate(0px,0px)';
+
+    /* 4) 旧版本：沿弧线铺开；装不下时末位换成入口卡 */
+    fanCtx.top = top;
+    dfanFan.style.left = cx + 'px';
+    dfanFan.style.top = top + 'px';
+    dfanFan.classList.remove('list', 'sd');
+    dfanFan.innerHTML = fanHTML(m, model);
+    bindFan(m, stack);
+    syncBar(m);
+    updateUndo(m);
+
+    /* 3) 入场：先挂载，再触发展开态 */
+    stack.classList.add('is-open');
+    dfan.classList.add('in');
+    dfan.removeAttribute('aria-hidden');
+    void dfan.offsetWidth;
+    window.requestAnimationFrame(function(){
+      dfan.classList.add('on');
+      dfanFolder.style.transform = 'translate(0px,' + dy + 'px)';
+    });
+
+    var bar = stack.querySelector('.d-bar');
+    if (bar && bar.tagName === 'BUTTON') bar.setAttribute('aria-expanded', 'true');
+    dOpen = stack;
+  }
+
+  /* 全量版本清单：扇面装不下时，由「+N」入口卡展开成可滚动的列表 */
+  function dfanShowAll(m, stack){
+    if (!dOpen || dfanFan.classList.contains('list')) return;
+    var cr = stack.querySelector('.d-card').getBoundingClientRect();
+    var vw = window.innerWidth, vh = window.innerHeight;
+    var ccx = cr.left + cr.width / 2;
+    var w = Math.max(300, Math.min(520, vw - 32));
+    /* 向上开；上方不够就改为向下压住卡片 */
+    var up = cr.top - 40, down = vh - cr.top - 36;
+    var dir = up >= 240 ? 'up' : 'down';
+    var h = Math.max(200, Math.min(430, dir === 'up' ? up : down));
+    /* 卡片靠边时把清单整体挪回视口内 */
+    var sx = 0;
+    if (ccx - w / 2 < 16) sx = 16 - (ccx - w / 2);
+    else if (ccx + w / 2 > vw - 16) sx = vw - 16 - (ccx + w / 2);
+
+    var list = m.versions.filter(function(v){ return !isGone(m, v.v); });
+    var wrap = document.createElement('div');
+    wrap.className = 'dfan-sheet';
+    wrap.style.setProperty('--sw', Math.round(w) + 'px');
+    wrap.style.setProperty('--sh', Math.round(h) + 'px');
+    wrap.style.setProperty('--sx', Math.round(sx) + 'px');
+    wrap.innerHTML = '<div class="ds-head"><b>全部版本</b>'
+      + '<span class="ds-n">共 ' + list.length + ' 个</span>'
+      + '<button class="ds-back" type="button">返回扇形</button></div>'
+      + '<div class="ds-list">' + list.map(function(v, i){
+          return '<a class="ds-row' + (i === 0 ? ' cur' : '') + '" href="' + LINK(v.file)
+            + '" target="_blank" title="' + esc(v.title) + '">'
+            + '<span class="ds-v">' + esc(v.v) + '</span>'
+            + '<span class="ds-t">' + esc(v.title) + '</span>'
+            + '<span class="ds-m">' + v.date + ' · ' + v.size + '</span>'
+            + '<span class="pill ' + v.tone + '">' + esc(v.state) + '</span></a>';
+        }).join('') + '</div>';
+
+    if (dir === 'down') dfanFan.classList.add('sd');
+    dfanFan.appendChild(wrap);
+    void wrap.offsetWidth;
+    dfanFan.classList.add('list');
+
+    wrap.querySelector('.ds-back').addEventListener('click', function(e){
+      e.stopPropagation();
+      dfanBackFromList();
+    });
+  }
+
+  function dfanBackFromList(){
+    var wrap = dfanFan.querySelector('.dfan-sheet');
+    if (!wrap) return false;
+    dfanFan.classList.remove('list');
+    window.setTimeout(function(){
+      if (wrap.parentNode) wrap.parentNode.removeChild(wrap);
+    }, 260);
+    window.setTimeout(function(){
+      if (!dfanFan.classList.contains('list')) dfanFan.classList.remove('sd');
+    }, 300);
+    return true;
+  }
+
+  [].forEach.call(document.querySelectorAll('#dGrid .d-stack'), function(stack){
+    var bar = stack.querySelector('.d-bar');
+    if (!bar || bar.tagName !== 'BUTTON') return;   /* 单版本卡整卡即文件入口，不挂浮层 */
+    stack.addEventListener('click', function(e){
+      if (e.target.closest('.hero')) return;        /* 主图仍是「打开文件」 */
+      if (stack.classList.contains('is-open')) dfanClose();
+      else dfanOpen(stack);
+    });
+  });
+  dfanVeil.addEventListener('click', dfanClose);
+  window.addEventListener('resize', function(){ if (dOpen) dfanClose(); });
+
+  /* ---------- C 的展开 ---------- */
+  [].forEach.call(document.querySelectorAll('.c-more'), function(btn){
+    btn.addEventListener('click', function(){
+      var stack = btn.closest('.c-stack');
+      var open = stack.classList.toggle('open');
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+  });
+
+  /* ---------- 方案切换 ---------- */
+  var TAGS = { a:'同一批数据 · 四种渲染 · 当前查看 A', b:'同一批数据 · 四种渲染 · 当前查看 B', c:'同一批数据 · 四种渲染 · 当前查看 C', d:'同一批数据 · 四种渲染 · 当前查看 D' };
+  var btns = [].slice.call(document.querySelectorAll('.swbtn'));
+
+  function select(key){
+    if (dOpen) dfanClose();
+    btns.forEach(function(b){ b.classList.toggle('on', b.dataset.pane === key); });
+    [].forEach.call(document.querySelectorAll('.pane'), function(p){
+      p.classList.toggle('on', p.id === 'pane-' + key);
+    });
+    document.getElementById('swtag').textContent = TAGS[key] || '';
+    try { localStorage.setItem('filemod-pane-v3', key); } catch(e){}
+  }
+
+  btns.forEach(function(b){ b.addEventListener('click', function(){ select(b.dataset.pane); }); });
+
+  var saved = 'a';
+  try { saved = localStorage.getItem('filemod-pane-v3') || 'd'; } catch(e){}
+  select(saved);
+
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape' && dOpen){
+      if (dfanDlg.classList.contains('on')){ dfanAskClose(); return; }
+      if (dfanFan.classList.contains('list')){ dfanBackFromList(); return; }
+      dfanClose(); return;
+    }
+    if (dOpen) return;
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight'){
+      var order = ['a','b','c','d'];
+      var idx = order.indexOf(document.querySelector('.swbtn.on').dataset.pane);
+      idx = (idx + (e.key === 'ArrowRight' ? 1 : order.length - 1)) % order.length;
+      select(order[idx]);
+    }
+  });
+})();
+</script>
+</body></html>
