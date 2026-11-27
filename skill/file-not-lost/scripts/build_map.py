@@ -126,7 +126,9 @@ def check_map(m):
 
         t = s["type"]
         if t == "lead":
-            check_card(need(s, "item", w, dict), w + ".item", ids)
+            # item 可缺省：项目还没有收敛出主稿时，该区保留但显示「暂无内容」
+            if s.get("item"):
+                check_card(s["item"], w + ".item", ids)
             side = need(s, "side", w, dict)
             need(side, "title", w + ".side")
         elif t == "grid":

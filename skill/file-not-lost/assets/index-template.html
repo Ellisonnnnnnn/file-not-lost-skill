@@ -11,7 +11,7 @@
      其余字节（CSS / 渲染器 / 交互）不得手改。
      改完壳请跑 scripts/rehash_shell.py 重算下面的指纹，
      否则 build_map.py 会以「壳被改动」为由拒绝构建。
-     css-sha256: ca8628e5a42281d1
+     css-sha256: 542272d57297218a
      js-sha256: 730e2b7a58585d67
      ============================================================ -->
 <style>
@@ -97,6 +97,13 @@
     color:var(--n6); font-size:11px; line-height:18px; font-weight:500;
   }
   .sdesc{margin:0 0 16px 26px; color:var(--n6); font-size:12.5px; line-height:20px}
+  /* 空分区：分区保留、内容留白，不用占位卡凑数 */
+  .sempty{
+    margin:0 0 4px; padding:16px 18px; border:1.5px dashed var(--n4);
+    border-radius:var(--r); background:transparent;
+    color:var(--n5); font-size:12.5px; line-height:20px;
+  }
+  .d-grid:empty{display:none}
 
   /* ---------- 二级分类（其他文件） ---------- */
   .subgroup+.subgroup{margin-top:28px}
@@ -722,70 +729,88 @@ var MAP = __MAP_JSON__;
   /* ---- 分区 ---- */
   (function renderSections(){
     var html = (MAP.sections || []).map(function(sec){
-      var head = '<div class="shead"' + (sec.collapsible
+      /* 空区也要展开：折叠起来会把「这里没东西」藏成一个看起来有内容的标题 */
+      var has = sec.type === 'lead'   ? !!sec.item
+              : sec.type === 'grid'   ? !!(sec.items && sec.items.length)
+              : sec.type === 'timeline' ? !!(sec.days && sec.days.length)
+              : !!(sec.groups && sec.groups.length);
+      var fold = !!sec.collapsible && has;
+      var head = '<div class="shead"' + (fold
           ? ' role="button" tabindex="0" aria-expanded="false" aria-controls="' + esc(sec.id) + '-body"'
           : '') + '>'
         + '<span class="no">' + esc(sec.no) + '</span><h2>' + esc(sec.title) + '</h2>'
         + (sec.count ? '<span class="count">' + esc(sec.count) + '</span>' : '')
-        + (sec.collapsible ? '<span class="chev">' + CHEVB + '</span>' : '')
+        + (fold ? '<span class="chev">' + CHEVB + '</span>' : '')
         + '</div>';
       var desc = sec.desc ? '<p class="sdesc">' + rich(sec.desc) + '</p>' : '';
       var body = '';
+      var emp = '<div class="sempty">暂无内容</div>';
 
       if (sec.type === 'lead'){
-        var item = sec.item || {};
-        var vs = live(item);
         var side = sec.side || {};
-        body += '<div class="lead"><div class="d-grid" id="host-' + esc(sec.id) + '" style="grid-template-columns:1fr"></div>'
-          + '<div class="lead-side">'
+        var sideHTML = '<div class="lead-side">'
           +   '<h3>' + esc(side.title || '') + '</h3>'
           +   '<p>' + rich(side.body || '') + '</p>'
           +   (side.tags && side.tags.length
                 ? '<div class="tags">' + side.tags.map(function(t){ return '<span>' + esc(t) + '</span>'; }).join('') + '</div>'
                 : '')
           +   (side.path ? '<div class="lpath">' + esc(side.path) + '</div>' : '')
-          + '</div></div>';
+          + '</div>';
+        body += '<div class="lead">'
+          + (sec.item
+                ? '<div class="d-grid" id="host-' + esc(sec.id) + '" style="grid-template-columns:1fr"></div>'
+                : '<div>' + emp + '</div>')
+          + sideHTML + '</div>';
       }
       else if (sec.type === 'grid'){
-        body += '<div class="d-grid" id="host-' + esc(sec.id) + '"></div>';
+        var cards = sec.items || [];
+        body += '<div class="d-grid" id="host-' + esc(sec.id) + '"></div>'
+             +  (cards.length ? '' : emp);
       }
       else if (sec.type === 'timeline'){
-        body += (sec.days || []).map(function(d){
-          return '<div class="daygroup">'
-            + '<div class="dg-left"><b>' + esc(d.date) + '</b><span>' + esc(d.label || '') + '</span></div>'
-            + '<div class="dg-body"><p>' + rich(d.body || '') + '</p><div class="snaps">'
-            + (d.snaps || []).map(function(s){
-                return '<a' + (s.now ? ' class="now"' : '') + ' href="' + esc(s.href) + '" target="_blank">'
-                     + esc(s.title) + '<em>' + esc(s.size || '') + '</em></a>';
-              }).join('')
-            + '</div></div></div>';
-        }).join('') + noteHTML(sec.note, false);
+        var days = sec.days || [];
+        body += (days.length
+          ? days.map(function(d){
+              return '<div class="daygroup">'
+                + '<div class="dg-left"><b>' + esc(d.date) + '</b><span>' + esc(d.label || '') + '</span></div>'
+                + '<div class="dg-body"><p>' + rich(d.body || '') + '</p><div class="snaps">'
+                + (d.snaps || []).map(function(s){
+                    return '<a' + (s.now ? ' class="now"' : '') + ' href="' + esc(s.href) + '" target="_blank">'
+                         + esc(s.title) + '<em>' + esc(s.size || '') + '</em></a>';
+                  }).join('')
+                + '</div></div></div>';
+            }).join('')
+          : emp) + noteHTML(sec.note, false);
       }
       else if (sec.type === 'subgroups'){
-        body += (sec.groups || []).map(function(gr){
-          return '<div class="subgroup">'
-            + '<div class="subhead"><h3>' + esc(gr.title) + '</h3>'
-            + (gr.count ? '<span class="scount">' + esc(gr.count) + '</span>' : '') + '</div>'
-            + (gr.desc ? '<p class="subdesc">' + rich(gr.desc) + '</p>' : '')
-            + '<div class="d-grid" id="host-' + esc(sec.id) + '-' + esc(gr.id) + '"></div>'
-            + (gr.note ? '<div style="margin-top:12px">' + noteHTML(gr.note, true) + '</div>' : '')
-            + '</div>';
-        }).join('');
+        var grs = sec.groups || [];
+        body += (grs.length
+          ? grs.map(function(gr){
+              return '<div class="subgroup">'
+                + '<div class="subhead"><h3>' + esc(gr.title) + '</h3>'
+                + (gr.count ? '<span class="scount">' + esc(gr.count) + '</span>' : '') + '</div>'
+                + (gr.desc ? '<p class="subdesc">' + rich(gr.desc) + '</p>' : '')
+                + '<div class="d-grid" id="host-' + esc(sec.id) + '-' + esc(gr.id) + '"></div>'
+                + (gr.note ? '<div style="margin-top:12px">' + noteHTML(gr.note, true) + '</div>' : '')
+                + (gr.items && gr.items.length ? '' : emp)
+                + '</div>';
+            }).join('')
+          : emp);
       }
 
-      var secBody = sec.collapsible
+      var secBody = fold
         ? '<div class="sec-body" id="' + esc(sec.id) + '-body"><div class="sec-inner">' + body + '</div></div>'
         : body;
 
       return '<section id="' + esc(sec.id) + '"' + (sec.anchor ? ' data-anchor="' + esc(sec.anchor) + '"' : '')
-           + (sec.collapsible ? ' class="collapsible"' : '') + '>'
+           + (fold ? ' class="collapsible"' : '') + '>'
            + head + desc + secBody + '</section>';
     }).join('');
     document.getElementById('main').innerHTML = html;
 
     /* 填充卡片 */
     (MAP.sections || []).forEach(function(sec){
-      if (sec.type === 'lead') paint(document.getElementById('host-' + sec.id), [sec.item]);
+      if (sec.type === 'lead'){ if (sec.item) paint(document.getElementById('host-' + sec.id), [sec.item]); }
       else if (sec.type === 'grid') paint(document.getElementById('host-' + sec.id), sec.items);
       else if (sec.type === 'subgroups') (sec.groups || []).forEach(function(gr){
         paint(document.getElementById('host-' + sec.id + '-' + gr.id), gr.items);
